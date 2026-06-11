@@ -511,6 +511,19 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 // netwerkverkeer bekijkt kan de Supabase-data alsnog benaderen. Echte auth volgt later.
 const PW_HASH='567719eaa844bb9b88d004fbd8609cd5e5e6360b51a2fb27b3ea975f000819c0';
 
+// Veilige sessionStorage-wrapper: bij een opaque origin (lokaal file:// of sandbox)
+// gooit sessionStorage een SecurityError. Dan vallen we terug op een in-memory variabele.
+const safeStore=(function(){
+  let mem={};
+  try{
+    const t='__t';window.sessionStorage.setItem(t,'1');window.sessionStorage.removeItem(t);
+    return {get:k=>{try{return window.sessionStorage.getItem(k);}catch(e){return mem[k]||null;}},
+            set:(k,v)=>{try{window.sessionStorage.setItem(k,v);}catch(e){mem[k]=v;}}};
+  }catch(e){
+    return {get:k=>mem[k]||null, set:(k,v)=>{mem[k]=v;}};
+  }
+})();
+
 async function sha256(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -527,7 +540,7 @@ async function tryUnlock(){
   if(!pw){err.textContent='Voer een wachtwoord in.';return;}
   const h=await sha256(pw);
   if(h===PW_HASH){
-    sessionStorage.setItem('oim_unlocked','1');
+    safeStore.set('oim_unlocked','1');
     unlockApp();
   } else {
     err.textContent='Onjuist wachtwoord.';
@@ -1049,7 +1062,7 @@ function initApp(){renderChips();updateCtx();renderReport('participant');fitScro
 
 // ---- Lockscreen activeren (na alle definities) ----
 (function(){
-  if(sessionStorage.getItem('oim_unlocked')==='1'){ unlockApp(); }
+  if(safeStore.get('oim_unlocked')==='1'){ unlockApp(); }
   document.getElementById('lockBtn').addEventListener('click',tryUnlock);
   document.getElementById('lockPw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
   document.getElementById('lockPw').focus();
