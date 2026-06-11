@@ -547,7 +547,7 @@ const TOT={2023:2520011,2024:2753031};
 const sum25=BASE25.reduce((a,b)=>a+b,0);const shares=BASE25.map(v=>v/sum25);
 function mk(scale,seed){const j=seed===0?(a=>a.map(v=>v==null?null:Math.round(v))):(a=>a.map((v,i)=>v==null?null:Math.round(v*(1+0.05*Math.sin(seed*2.1+i*1.1)))));return {2023:j(shares.map(s=>TOT[2023]*s*scale)),2024:j(shares.map(s=>TOT[2024]*s*scale)),2025:j(BASE25.map(v=>v*scale)),2026:j(BASE26.map(v=>v==null?null:v*scale))};}
 const ASSETS=[
- {id:'sjp',name:'Sint Jorisplein',city:'Amersfoort',concept:false,tenant:'Q-Park Operations Netherlands B.V.',spaces:448,fv:33000000,fixed:1499630,turn:692976,occ:1.00,walt:16.6,index:'1 jan (CPI)',expiry:'31-12-2042',omzet:mk(1.00,0),scen:{Budget:2900000,Forecast:3065000,'IM-prognose':2800000}},
+ {id:'sjp',name:'Parkeergarage Sint Jorisplein',city:'Amersfoort',concept:false,tenant:'Q-Park Operations Netherlands B.V.',spaces:448,fv:33000000,fixed:1499630,turn:692976,occ:1.00,walt:16.6,index:'1 jan (CPI)',expiry:'31-12-2042',omzet:mk(1.00,0),scen:{Budget:2900000,Forecast:3065000,'IM-prognose':2800000}},
  {id:'ctr',name:'Centrum',city:'Utrecht',concept:true,tenant:'Q-Park (concept)',spaces:320,fv:21500000,fixed:1040000,turn:455000,occ:0.94,walt:9.2,index:'1 jan (CPI)',expiry:'30-06-2035',omzet:mk(0.66,1),scen:{Budget:1910000,Forecast:2020000,'IM-prognose':1850000}},
  {id:'stn',name:'Stationsplein',city:'Amersfoort',concept:true,tenant:'Q-Park (concept)',spaces:210,fv:13200000,fixed:690000,turn:300000,occ:0.97,walt:12.4,index:'1 jan (CPI)',expiry:'31-12-2038',omzet:mk(0.43,2),scen:{Budget:1245000,Forecast:1315000,'IM-prognose':1205000}},
 ];
@@ -942,6 +942,21 @@ function selectFund(fid, fname){
 }
 
 // Haal statische asset-gegevens op uit Supabase en cache ze op naam
+// Koppel een Supabase-assetnaam aan de lokale ASSETS-array, tolerant voor
+// naamsverschillen (bijv. "Parkeergarage Sint Jorisplein" vs "Sint Jorisplein").
+function matchLocalAsset(sbName){
+  if(!sbName)return null;
+  const n=sbName.toLowerCase().trim();
+  // 1. exacte match
+  let m=ASSETS.find(x=>x.name.toLowerCase().trim()===n);
+  if(m)return m;
+  // 2. deelmatch: lokale naam zit in Supabase-naam of andersom
+  m=ASSETS.find(x=>{const ln=x.name.toLowerCase().trim();return n.includes(ln)||ln.includes(n);});
+  if(m)return m;
+  // 3. match op stad als laatste redmiddel (alleen als uniek)
+  return null;
+}
+
 async function loadAssetStatic(){
   if(!state.fundId) return;
   try{
@@ -950,9 +965,9 @@ async function loadAssetStatic(){
     const pIds=ports.map(p=>p.id).join(',');
     const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name,asset_class,address,city,capacity,capacity_unit,construction_year,latest_fair_value,fair_value_date,attributes&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     const assets=await aRes.json();
-    // Koppel op naam aan de lokale ASSETS-array
+    // Koppel op naam aan de lokale ASSETS-array (tolerant voor naamsverschillen)
     assets.forEach(sb=>{
-      const local=ASSETS.find(x=>x.name===sb.name);
+      const local=matchLocalAsset(sb.name);
       const key=local?local.id:sb.name;
       assetStaticCache[key]={
         address:sb.address, city:sb.city, asset_class:sb.asset_class==='parking'?'Parkeren':sb.asset_class,
@@ -978,7 +993,7 @@ async function loadAssetStatic(){
     // groepeer per lokale asset-id
     tariffCache={};
     sbAssets.forEach(sb=>{
-      const local=ASSETS.find(x=>x.name===sb.name); const key=local?local.id:sb.id;
+      const local=matchLocalAsset(sb.name); const key=local?local.id:sb.id;
       tariffCache[key]=tariffs.filter(t=>t.asset_id===sb.id);
       assetUuidMap[key]=sb.id;
     });
