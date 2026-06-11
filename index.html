@@ -292,6 +292,25 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 <!-- DATA-IMPORT -->
 <div class="tab-panel" data-panel="import">
  <div class="section-label">Data inlezen</div>
+
+ <!-- Fonds/asset selector -->
+ <div class="info-card" style="margin-bottom:14px;padding:14px 18px">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+   <div>
+    <div class="ctrl-label" style="margin-bottom:4px">Fonds</div>
+    <select id="sel-fund" class="ctrl-select" style="min-width:220px" onchange="onFundChange()">
+     <option value="">— laden…</option>
+    </select>
+   </div>
+   <div>
+    <div class="ctrl-label" style="margin-bottom:4px">Asset (optioneel)</div>
+    <select id="sel-asset" class="ctrl-select" style="min-width:220px">
+     <option value="">— alle assets</option>
+    </select>
+   </div>
+  </div>
+ </div>
+
  <div class="grid3col">
 
   <div class="upload-card" id="zone-qpark">
@@ -559,6 +578,54 @@ cmpSel.addEventListener('change',e=>{state.compare=e.target.value;updateCtx();re
 renderChips();updateCtx();renderReport('participant');fitScroll();
 
 // ============ UPLOAD LOGICA ============
+// Laad fonds- en asset-opties bij openen import-tab
+async function loadImportSelectors() {
+  try {
+    const fr = await fetch(`${SB_URL}/rest/v1/funds?select=id,name&order=name`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const funds = await fr.json();
+    const fsel = document.getElementById('sel-fund');
+    fsel.innerHTML = '<option value="">— kies fonds</option>';
+    funds.forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.id; o.textContent = f.name; fsel.appendChild(o);
+    });
+    if (funds.length === 1) { fsel.value = funds[0].id; onFundChange(); }
+  } catch(e) { console.warn('Fondsen laden mislukt:', e); }
+}
+
+async function onFundChange() {
+  const fundId = document.getElementById('sel-fund').value;
+  const asel = document.getElementById('sel-asset');
+  asel.innerHTML = '<option value="">— alle assets</option>';
+  if (!fundId) return;
+  try {
+    const pRes = await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${fundId}`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const portfolios = await pRes.json();
+    if (!portfolios.length) return;
+    const pIds = portfolios.map(p => p.id).join(',');
+    const aRes = await fetch(`${SB_URL}/rest/v1/assets?select=id,name&portfolio_id=in.(${pIds})&order=name`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const assets = await aRes.json();
+    assets.forEach(a => {
+      const o = document.createElement('option'); o.value = a.id; o.textContent = a.name; asel.appendChild(o);
+    });
+    if (assets.length === 1) asel.value = assets[0].id;
+  } catch(e) { console.warn('Assets laden mislukt:', e); }
+}
+
+// Laad selectors bij klik op import-tab
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tabNav').addEventListener('click', e => {
+    const b = e.target.closest('.tab-btn');
+    if (b && b.dataset.t === 'import') loadImportSelectors();
+  });
+});
+
 const SB_URL  = 'https://cksrnlxfsltivrtveypo.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrc3JubHhmc2x0aXZydHZleXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTk1NDYsImV4cCI6MjA5NjY5NTU0Nn0.VM5Jec2MvCHOJrpEnKGA8Aq3D6NPfLBtPHKWJRxqfb0';
 
@@ -672,6 +739,11 @@ async function doUpload(type, file, rows) {
   const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
   const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
 
+  const fundId  = document.getElementById('sel-fund')?.value  || null;
+  const assetId = document.getElementById('sel-asset')?.value || null;
+
+  if (!fundId) throw new Error('Selecteer eerst een fonds voordat je uploadt.');
+
   // Bepaal period_label voor Q-Park
   let period_label = null;
   if(type === 'qpark') {
@@ -684,13 +756,14 @@ async function doUpload(type, file, rows) {
 
   // Sla op in imports-logboek
   await sbPost('imports', [{
-    source_type: UPLOAD_TYPES[type].source_type,
-    file_name:   file.name,
+    fund_id:       fundId,
+    source_type:   UPLOAD_TYPES[type].source_type,
+    file_name:     file.name,
     period_label,
-    status:      'processed',
+    status:        'processed',
     rows_ingested: dataRows.length,
-    message:     `Headers: ${rows[0].join(' | ')}`,
-    imported_by: 'dashboard',
+    message:       (assetId ? `asset_id:${assetId} · ` : '') + `Headers: ${rows[0].join(' | ')}`,
+    imported_by:   'dashboard',
   }]);
   return dataRows.length;
 }
