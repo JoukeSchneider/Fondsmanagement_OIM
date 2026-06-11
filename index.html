@@ -673,8 +673,7 @@ function renderAssetTariffs(){
   const tbody=document.getElementById('tariffBody'); if(!tbody)return;
 
   if(!all.length){
-    const cacheKeys=Object.keys(tariffCache).join(', ')||'(leeg)';
-    const diag=state.fundId?`cache-sleutels: ${cacheKeys} · gezocht: ${a.id}`:'geen fonds geselecteerd';
+    const diag=_lastLoadStatus?`status: ${_lastLoadStatus}`:'nog niet geladen — klik opnieuw op het fonds';
     tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">Geen tarieven geladen<br><small style="opacity:.6">${diag}</small></td></tr>`;
     document.getElementById('tariffDateLbl').textContent='';
     if(tariffChart){tariffChart.destroy();tariffChart=null;}
@@ -942,14 +941,15 @@ document.getElementById('tabNav').addEventListener('click',e=>{const b=e.target.
 document.getElementById('periodSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;gotoLevel(b.dataset.p);});
 document.getElementById('scenSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#scenSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.scenario=b.dataset.s;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
 document.getElementById('reportSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#reportSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderReport(b.dataset.r);});
-function selectFund(fid, fname){
+async function selectFund(fid, fname){
   state.fundId = fid; state.fundName = fname;
   const lbl = document.getElementById('fundActiveLabel');
   if(lbl){ lbl.textContent = fname; lbl.classList.remove('muted'); }
   // Ontgrendel alle detail-tabs
   document.querySelectorAll('.tab-btn.locked').forEach(b=>b.classList.remove('locked'));
-  loadAssetStatic();
+  _lastLoadStatus='laden gestart…';
   activateTab('fonds');
+  await loadAssetStatic();
 }
 
 // Haal statische asset-gegevens op uit Supabase en cache ze op naam
@@ -968,15 +968,24 @@ function matchLocalAsset(sbName){
   return null;
 }
 
+let _lastLoadStatus='';
 async function loadAssetStatic(){
-  if(!state.fundId) return;
+  if(!state.fundId){ _lastLoadStatus='geen fonds'; return; }
   try{
+    // 1. Portfolios van dit fonds
     const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    const ports=await pRes.json(); if(!ports.length)return;
+    if(!pRes.ok){ _lastLoadStatus='portfolio-fetch faalde: HTTP '+pRes.status; afterLoad(); return; }
+    const ports=await pRes.json();
+    if(!ports.length){ _lastLoadStatus='geen portfolios gevonden'; afterLoad(); return; }
     const pIds=ports.map(p=>p.id).join(',');
+
+    // 2. Assets in die portfolios
     const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name,asset_class,address,city,capacity,capacity_unit,construction_year,latest_fair_value,fair_value_date,attributes&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    if(!aRes.ok){ _lastLoadStatus='asset-fetch faalde: HTTP '+aRes.status; afterLoad(); return; }
     const assets=await aRes.json();
-    // Koppel op naam aan de lokale ASSETS-array (tolerant voor naamsverschillen)
+    if(!assets.length){ _lastLoadStatus='geen assets gevonden'; afterLoad(); return; }
+
+    // Statische data cachen
     assets.forEach(sb=>{
       const local=matchLocalAsset(sb.name);
       const data={
@@ -989,42 +998,35 @@ async function loadAssetStatic(){
       };
       assetStaticCache[sb.id]=data;
       if(local) assetStaticCache[local.id]=data;
+      if(state.selAsset) assetStaticCache[state.selAsset]=data; // single-asset koppeling
     });
-    // Single-asset fallback: koppel direct aan geselecteerde asset
-    if(assets.length===1 && state.selAsset && !assetStaticCache[state.selAsset]){
-      const sb=assets[0];
-      assetStaticCache[state.selAsset]=assetStaticCache[sb.id];
-    }
-    if(state.tab==='asset')renderAsset();
-  }catch(e){console.warn('Statische asset-data laden mislukt:',e);}
-  // Laad parkeertarieven (alle historie) en cache per asset-id
-  try{
-    const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    const ports=await pRes.json(); if(!ports.length)return;
-    const pIds=ports.map(p=>p.id).join(',');
-    const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    const sbAssets=await aRes.json();
-    const sbIds=sbAssets.map(a=>a.id).join(',');
+
+    // 3. Tarieven
+    const sbIds=assets.map(a=>a.id).join(',');
     const tRes=await fetch(`${SB_URL}/rest/v1/parking_tariffs?select=*&asset_id=in.(${sbIds})&order=category,valid_from`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    if(!tRes.ok){ _lastLoadStatus='tarief-fetch faalde: HTTP '+tRes.status; afterLoad(); return; }
     const tariffs=await tRes.json();
-    // groepeer per lokale asset-id
+
     tariffCache={};
-    sbAssets.forEach(sb=>{
+    assets.forEach(sb=>{
       const local=matchLocalAsset(sb.name);
       const tlist=tariffs.filter(t=>t.asset_id===sb.id);
-      // Cache onder zowel de Supabase-UUID als de lokale id (indien match)
       tariffCache[sb.id]=tlist;
       assetUuidMap[sb.id]=sb.id;
       if(local){ tariffCache[local.id]=tlist; assetUuidMap[local.id]=sb.id; }
+      if(state.selAsset){ tariffCache[state.selAsset]=tlist; assetUuidMap[state.selAsset]=sb.id; }
     });
-    // Fallback: als er precies één asset in Supabase staat en één lokaal geselecteerd,
-    // koppel die direct (lost naam-mismatch definitief op)
-    if(sbAssets.length===1 && state.selAsset){
-      tariffCache[state.selAsset]=tariffs;
-      assetUuidMap[state.selAsset]=sbAssets[0].id;
-    }
-    if(state.tab==='asset')renderAssetTariffs();
-  }catch(e){console.warn('Tarieven laden mislukt:',e);}
+
+    _lastLoadStatus=`OK · ${assets.length} asset(s), ${tariffs.length} tarieven`;
+    afterLoad();
+  }catch(e){
+    _lastLoadStatus='netwerkfout: '+e.message;
+    afterLoad();
+  }
+}
+function afterLoad(){
+  if(state.tab==='asset'){ renderAsset(); }
+  else if(state.tab==='portefeuille'){ renderPortfolio(); }
 }
 document.querySelectorAll('.fund-card[data-fund]').forEach(c=>c.onclick=()=>{
   const fid = c.dataset.fundid;
