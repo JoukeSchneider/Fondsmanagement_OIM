@@ -615,6 +615,8 @@ function renderAsset(){
     _tariffLoading=true;
     loadAssetStatic().finally(()=>{_tariffLoading=false;});
   }
+  // Ververs altijd de KPI's, statische info, financials, rent roll en tarieven
+  updateAssetKpis();
   const ctx=document.getElementById('assetChart');if(!ctx)return;if(assetChart)assetChart.destroy();
   const Y=state.year,prim=primaryMonthly(Y),bench=resolveBench();
   const title=document.getElementById('assetChartTitle'),sub=document.getElementById('assetChartSub');
