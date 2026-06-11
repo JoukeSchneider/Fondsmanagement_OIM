@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orange IM · Fondsmanager-dashboard (concept)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F4F5F7;--bg2:#FFFFFF;--bg3:#F0F1F3;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text:#111827;--text2:#6B7280;--text3:#9CA3AF;--orange:#EA6C00;--orange-dim:rgba(234,108,0,0.10);--green:#16A34A;--green-dim:rgba(22,163,74,0.10);--red:#DC2626;--red-dim:rgba(220,38,38,0.10);--amber:#B45309;--amber-dim:rgba(180,83,9,0.10);--blue:#2563EB;--blue-dim:rgba(37,99,235,0.10);--r:8px;--r2:12px}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;height:100vh;overflow:hidden}
+.mono{font-family:'DM Mono',monospace}
+.shell{max-width:1320px;margin:0 auto;padding:0 24px;height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 0;flex-wrap:wrap;gap:16px;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{width:34px;height:34px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:#fff;letter-spacing:.5px}
+.logo-text{font-size:15px;font-weight:500}
+.logo-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.concept-pill{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);background:var(--orange-dim);padding:3px 9px;border-radius:20px;margin-left:8px}
+.controls{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.ctrl{display:flex;flex-direction:column;gap:5px}
+.ctrl-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.seg{display:flex;gap:2px;background:var(--bg3);border-radius:var(--r);padding:3px;border:1px solid var(--border)}
+.seg button{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .12s}
+.seg button.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);cursor:pointer}
+.tab-nav{display:flex;gap:2px;padding:16px 0 0;border-bottom:2px solid var(--border);margin-bottom:0;flex-wrap:wrap;flex-shrink:0}
+.tab-btn{padding:9px 16px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:var(--r) var(--r) 0 0;transition:all .12s;white-space:nowrap}
+.tab-btn.locked{opacity:.38;cursor:not-allowed;pointer-events:none}
+.tab-btn:hover{color:var(--text);background:var(--bg3)}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange)}
+#mainScroll{flex:1;overflow-y:auto;padding:22px 10px 28px 0;min-height:0}
+#mainScroll::-webkit-scrollbar{width:9px}#mainScroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.section-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:26px 0 12px}
+.section-label:first-child{margin-top:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px 17px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.orange::before{background:var(--orange)}.kpi-card.green::before{background:var(--green)}.kpi-card.blue::before{background:var(--blue)}.kpi-card.amber::before{background:var(--amber)}.kpi-card.gray::before{background:var(--text3)}
+.kpi-label{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:7px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:23px;font-weight:500;letter-spacing:-.5px}
+.kpi-val.sm{font-size:17px}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.b-green{background:var(--green-dim);color:var(--green)}.b-red{background:var(--red-dim);color:var(--red)}.b-amber{background:var(--amber-dim);color:var(--amber)}.b-orange{background:var(--orange-dim);color:var(--orange)}.b-blue{background:var(--blue-dim);color:var(--blue)}.b-gray{background:var(--bg3);color:var(--text2)}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.chart-title{font-size:13px;font-weight:500}
+.chart-subtitle{font-size:11px;color:var(--text2);margin-top:2px}
+.chart-wrap{position:relative;height:300px}
+.chart-wrap.sm{height:240px}
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+.grid2eq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mt12{margin-top:12px}
+.hint{font-size:11px;color:var(--text3);margin-top:8px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+.data-table td{padding:9px 10px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:12px}
+.data-table td:first-child{font-family:'DM Sans',sans-serif;color:var(--text2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr.total td{background:var(--bg3);font-weight:500}
+.data-table tr.sub td:first-child{padding-left:22px;color:var(--text3)}
+.tr-right{text-align:right}
+.conv-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;gap:12px}
+.conv-left{display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--text3)}
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.info-card-title{font-size:12px;font-weight:600;margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);gap:16px}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:11px;color:var(--text2)}
+.info-val{font-size:12px;font-weight:500;font-family:'DM Mono',monospace;text-align:right}
+.info-val.txt{font-family:'DM Sans',sans-serif}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r2);padding:22px;text-align:center;background:var(--bg2)}
+.upload-zone:hover{border-color:var(--orange);background:var(--orange-dim)}
+.grid3col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:800px){.grid3col{grid-template-columns:1fr}}
+.upload-card{background:var(--bg2);border:1.5px dashed var(--border2);border-radius:var(--r2);padding:22px 18px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;transition:border-color .15s,background .15s}
+.upload-card.has-file{border-color:var(--orange);border-style:solid;background:var(--orange-dim)}
+.uz-icon{font-size:26px;line-height:1}
+.uz-filename{font-size:11px;color:var(--orange);font-weight:500;word-break:break-all;min-height:15px}
+.uz-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.btn.danger{background:var(--red-dim);color:var(--red);border-color:rgba(220,38,38,.25)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.mb8{margin-bottom:8px}
+#confirm-overlay.open{display:flex!important}
+.uz-title{font-size:13px;font-weight:500;margin-bottom:3px}
+.uz-sub{font-size:11px;color:var(--text2)}
+.btn{padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
+.btn.primary{background:var(--orange);color:#fff;border-color:var(--orange)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.note{background:var(--blue-dim);border:1px solid rgba(37,99,235,.2);border-radius:var(--r);padding:11px 14px;font-size:12px;color:var(--blue);line-height:1.5}
+.note.amber{background:var(--amber-dim);border-color:rgba(180,83,9,.2);color:var(--amber)}
+.note.green{background:var(--green-dim);border-color:rgba(22,163,74,.25);color:var(--green)}
+.note.red{background:var(--red-dim);border-color:rgba(220,38,38,.25);color:var(--red)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.chips-lbl{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-right:4px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s}
+.chip .ck{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+.chip.on{border-color:var(--orange);color:var(--orange);background:var(--orange-dim)}
+.chip.on .ck{background:var(--orange);border-color:var(--orange)}
+.chip small{color:var(--text3);font-weight:400}
+.crumb{display:flex;gap:6px;align-items:center;font-size:12px;margin-bottom:12px;flex-wrap:wrap}
+.crumb a{color:var(--orange);cursor:pointer;font-weight:500}
+.crumb a:hover{text-decoration:underline}
+.crumb .sep{color:var(--text3)}.crumb .cur{color:var(--text2);font-weight:500}
+.asset-top{position:sticky;top:-22px;z-index:6;background:var(--bg);padding:6px 0 12px;border-bottom:1px solid var(--border);margin:-4px 0 14px}
+.fund-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:all .14s;margin-bottom:14px}
+.fund-card:hover{border-color:var(--orange);box-shadow:0 3px 14px rgba(234,108,0,.13);transform:translateY(-1px)}
+.fund-card.disabled{opacity:.5;cursor:not-allowed;border-style:dashed;box-shadow:none}
+.fund-card.disabled:hover{transform:none;border-color:var(--border2);box-shadow:none}
+.fund-active-label{padding:7px 12px;background:var(--orange-dim);border:1px solid var(--orange);border-radius:var(--r);font-size:13px;font-weight:600;color:var(--orange);white-space:nowrap}
+.fund-active-label.muted{background:var(--bg3);border-color:var(--border2);color:var(--text3);font-weight:500}
+#lockscreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1a1a1a 0%,#2a2018 100%);display:flex;align-items:center;justify-content:center}
+.lock-card{background:#fff;border-radius:16px;padding:40px 36px;width:340px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+.lock-logo{width:48px;height:48px;border-radius:10px;background:#E8590C;color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.lock-title{font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.lock-sub{font-size:12px;color:#888;margin-bottom:24px}
+.lock-input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box;outline:none;transition:border-color .15s}
+.lock-input:focus{border-color:#E8590C}
+.lock-btn{width:100%;padding:12px;background:#E8590C;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.lock-btn:hover{background:#d04f0a}
+.lock-error{color:#DC2626;font-size:12px;margin-top:12px;min-height:16px}
+.lock-note{color:#aaa;font-size:11px;margin-top:20px}
+.asset-static-grid{display:grid;grid-template-columns:340px 1fr;gap:14px}
+@media(max-width:760px){.asset-static-grid{grid-template-columns:1fr}}
+.asset-photo{border-radius:var(--r2);overflow:hidden;background:var(--bg3);border:1px solid var(--border);min-height:220px;display:flex;align-items:center;justify-content:center}
+.asset-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.asset-photo-ph{color:var(--text3);font-size:12px}
+.asset-static-card{align-self:start}
+.static-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);gap:16px;font-size:13px}
+.static-row:last-child{border-bottom:none}
+.static-row .k{color:var(--text2)}
+.static-row .v{font-weight:500;font-family:'DM Mono',monospace;text-align:right}
+.fund-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.fund-name{font-size:15px;font-weight:600}
+.fund-meta{font-size:11px;color:var(--text2);margin-top:3px}
+.fund-arrow{font-size:12px;color:var(--orange);font-weight:500;white-space:nowrap}
+.fund-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.fkpi{background:var(--bg3);border-radius:var(--r);padding:11px 13px}
+.fkpi .l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:5px}
+.fkpi .v{font-family:'DM Mono';font-size:16px;font-weight:500}
+.fkpi .s{font-size:10px;color:var(--text3);margin-top:3px}
+@media(max-width:880px){body{height:auto;overflow:auto}.shell{height:auto}#mainScroll{overflow:visible;flex:none}.asset-top{position:static}.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid2eq{grid-template-columns:1fr}.fund-kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<!-- LOCKSCREEN -->
+<div id="lockscreen">
+ <div class="lock-card">
+  <div class="lock-logo">OIM</div>
+  <div class="lock-title">Fondsmanager-dashboard</div>
+  <div class="lock-sub">Orange IM · besloten toegang</div>
+  <input type="password" id="lockPw" class="lock-input" placeholder="Wachtwoord" autocomplete="current-password">
+  <button class="lock-btn" id="lockBtn">Toegang</button>
+  <div class="lock-error" id="lockErr"></div>
+  <div class="lock-note">Besloten omgeving · alleen voor de fondsmanager</div>
+ </div>
+</div>
+<div class="shell" id="appShell" style="display:none">
+<header>
+ <div class="logo"><div class="logo-mark">OIM</div><div><div class="logo-text">Fondsmanager-dashboard<span class="concept-pill">Concept</span></div><div class="logo-sub">Orange IM · multi-fonds · multi-asset-class</div></div></div>
+ <div class="controls">
+  <div class="ctrl"><span class="ctrl-label">Actief fonds</span><div class="fund-active-label muted" id="fundActiveLabel">— geen fonds geselecteerd</div></div>
+  <div class="ctrl"><span class="ctrl-label">Jaar</span><select class="ctrl-select" id="yearSel"></select></div>
+  <div class="ctrl"><span class="ctrl-label">Periode</span><div class="seg" id="periodSeg"><button data-p="dag">Dag</button><button data-p="maand" class="active">Maand</button><button data-p="kwartaal">Kwartaal</button><button data-p="halfjaar">Halfjaar</button><button data-p="jaar">Jaar</button><button data-p="ytd">YTD</button></div></div>
+  <div class="ctrl"><span class="ctrl-label">Scenario</span><div class="seg" id="scenSeg"><button data-s="Actuals" class="active">Actuals</button><button data-s="Budget">Budget</button><button data-s="Forecast">Forecast</button><button data-s="IM-prognose">IM</button></div></div>
+  <div class="ctrl"><span class="ctrl-label">Vergelijk met</span><select class="ctrl-select" id="cmpSel"></select></div>
+ </div>
+</header>
+
+<div class="tab-nav" id="tabNav">
+ <button class="tab-btn active" data-t="fondsen">Fondsen</button>
+ <button class="tab-btn locked" data-t="fonds">Fonds</button>
+ <button class="tab-btn locked" data-t="portefeuille">Portefeuille</button>
+ <button class="tab-btn locked" data-t="asset">Asset</button>
+ <button class="tab-btn locked" data-t="financiering">Financiering</button>
+ <button class="tab-btn locked" data-t="participanten">Participanten</button>
+ <button class="tab-btn locked" data-t="rapportage">Rapportage</button>
+ <button class="tab-btn locked" data-t="import">Data-import</button>
+</div>
+
+<div id="mainScroll">
+
+<!-- FONDSEN -->
+<div class="tab-panel active" data-panel="fondsen">
+ <div class="section-label">Fondsen onder beheer · klik op een fonds voor detail</div>
+ <div class="fund-card" data-fund="pf1" data-fundid="00000000-0000-0000-0000-000000000001">
+  <div class="fund-head"><div><div class="fund-name">Orange IM Parkeerfonds I</div><div class="fund-meta">Parkeren · Parkeergarage Sint Jorisplein, Amersfoort · 108 participanten · BerlinHyp €20M</div></div><div class="fund-arrow">Bekijk fonds &rarr;</div></div>
+  <div class="fund-kpis">
+   <div class="fkpi"><div class="l">Fondsvermogen (NAV)</div><div class="v">€ 18,6 mln</div><div class="s">1.864 participaties</div></div>
+   <div class="fkpi"><div class="l">NAV per participatie</div><div class="v">€ 9.961,84</div><div class="s">inleg €10.000</div></div>
+   <div class="fkpi"><div class="l">Totaal rendement YTD</div><div class="v">+3,2%</div><div class="s">direct + indirect</div></div>
+   <div class="fkpi"><div class="l">Direct rendement p.j.</div><div class="v">5,0%</div><div class="s">uitkering / inleg</div></div>
+   <div class="fkpi"><div class="l">Loan-to-Value</div><div class="v">60,6%</div><div class="s">covenant n.t.b.</div></div>
+  </div>
+ </div>
+ <div class="fund-card disabled"><div class="fund-head"><div><div class="fund-name">+ Nieuw fonds</div><div class="fund-meta">Hotel, padelbanen of andere asset-class · zelfde structuur, eigen KPI's</div></div></div></div>
+ <div class="note mt12">Dit overzicht is een momentopname (snapshot) van de belangrijkste fondskpi's. De periode/scenario/vergelijk-selectors werken op de detailtabs.</div>
+</div>
+
+<!-- FONDS -->
+<div class="tab-panel" data-panel="fonds">
+ <div class="section-label">Orange IM Parkeerfonds I · <span id="fondsCtx" class="mono"></span></div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label">NAV per participatie</div><div class="kpi-val">€ 9.961,84</div><div class="kpi-sub"><span class="badge b-amber">&minus;0,4%</span> t.o.v. inleg €10.000 · 31-12-2025</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Totaal rendement YTD</div><div class="kpi-val">+3,2%</div><div class="kpi-sub">direct 2,4% · indirect 0,8%</div></div>
+  <div class="kpi-card blue"><div class="kpi-label" id="fondsOmzetLbl">Parkeeromzet fonds</div><div class="kpi-val sm" id="fondsOmzet">&mdash;</div><div class="kpi-sub" id="fondsOmzetSub"></div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Uitkering p.p. (Q1-2026)</div><div class="kpi-val sm">€ 125</div><div class="kpi-sub">&asymp; 5,0% direct rendement p.j.</div></div>
+ </div>
+ <div class="section-label">Liquiditeit</div>
+ <div class="kpi-grid">
+  <div class="kpi-card gray"><div class="kpi-label">Saldo liquiditeitsreserve</div><div class="kpi-val sm">€ 425.000</div><div class="kpi-sub">peildatum 31-05-2026</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Liquiditeitsdekking</div><div class="kpi-val sm">4,8 mnd</div><div class="kpi-sub">reserve / gem. maandlasten</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Vrije kasstroom YTD</div><div class="kpi-val sm">€ 188.000</div><div class="kpi-sub">na rente &amp; aflossing</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Kaspositie ABN AMRO</div><div class="kpi-val sm">€ 311.420</div><div class="kpi-sub">dagniveau · MT940</div></div>
+ </div>
+ <div class="section-label">Vooruitblik &amp; signalering · op basis van scenario <span id="fcScen" class="mono" style="text-transform:none;letter-spacing:0;color:var(--text2)"></span></div>
+ <div id="signalBanner" class="note">&mdash;</div>
+ <div class="grid2 mt12">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Liquiditeitsprojectie (18 maanden)</div><div class="chart-subtitle">Verwachte reserve vs. minimumbuffer · scenario-gestuurd</div></div></div><div class="chart-wrap sm"><canvas id="liqChart"></canvas></div></div>
+  <div class="info-card"><div class="info-card-title">Covenant-vooruitblik</div><div id="covRows"></div></div>
+ </div>
+ <div class="hint">Aannames (concept): rente €84k/mnd, aflossing €33k/mnd, uitkering €50k/mnd, minimumbuffer €150k, NRI per scenario, en covenantdrempels (ICR &ge;1,40&times; · DSCR &ge;1,20&times; · LTV &le;65%) zijn illustratief tot de leningsovereenkomst en kasstroomdata zijn ingelezen.</div>
+ <div class="section-label">NAV-ontwikkeling</div>
+ <div class="chart-card"><div class="chart-header"><div><div class="chart-title">NAV per participatie</div><div class="chart-subtitle">Actuals t/m 2025 · prognose v.a. 2026 · herwaardering verwacht 2028</div></div></div><div class="chart-wrap sm"><canvas id="navChart"></canvas></div></div>
+</div>
+
+<!-- PORTEFEUILLE -->
+<div class="tab-panel" data-panel="portefeuille">
+ <div class="section-label">Portefeuille · <span id="portCount" class="mono"></span></div>
+ <div class="chips" id="portChips"></div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label">Portefeuillewaarde (taxatie)</div><div class="kpi-val sm" id="pfWaarde">&mdash;</div><div class="kpi-sub" id="pfWaardeSub"></div></div>
+  <div class="kpi-card blue"><div class="kpi-label">BAR / NAR</div><div class="kpi-val sm" id="pfBarNar">&mdash;</div><div class="kpi-sub">bruto / netto aanvangsrendement</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Bezettingsgraad</div><div class="kpi-val" id="pfBezet">&mdash;</div><div class="kpi-sub">gewogen naar plaatsen</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="pfWalt">&mdash;</div><div class="kpi-sub">gewogen naar waarde</div></div>
+ </div>
+ <div class="section-label mt12">Huurinkomsten</div>
+ <div class="grid2">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
+ </div>
+ <div class="section-label mt12">Rent roll · alle geselecteerde assets</div>
+ <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Asset</th><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrBody"></tbody></table></div>
+</div>
+
+<!-- ASSET -->
+<div class="tab-panel" data-panel="asset">
+ <div class="asset-top">
+  <div class="section-label"><span id="assetTitle">Asset</span> · <span id="assetCtx" class="mono"></span></div>
+  <div class="chips" id="assetChips" style="margin-bottom:0"></div>
+ </div>
+
+ <!-- STATISCHE INFORMATIE + FOTO -->
+ <div class="section-label mt12">Objectgegevens</div>
+ <div class="asset-static-grid">
+  <div class="asset-photo" id="assetPhoto"><div class="asset-photo-ph">Geen foto beschikbaar</div></div>
+  <div class="info-card asset-static-card">
+   <div class="info-card-title">Statische informatie</div>
+   <div id="assetStaticBody"></div>
+  </div>
+ </div>
+
+ <!-- KPI'S -->
+ <div class="section-label mt12">Operationele KPI's</div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label" id="kpiOmzetLbl">Parkeeromzet</div><div class="kpi-val sm" id="kpiOmzet">&mdash;</div><div class="kpi-sub" id="kpiYoY"></div></div>
+  <div class="kpi-card blue"><div class="kpi-label" id="kpiRunrateLbl">Run-rate jaaromzet</div><div class="kpi-val sm" id="kpiRunrate">&mdash;</div><div class="kpi-sub" id="kpiVsScen"></div></div>
+  <div class="kpi-card gray"><div class="kpi-label" id="kpiTransLbl">Transacties</div><div class="kpi-val sm" id="kpiTrans">&mdash;</div><div class="kpi-sub">gem. € 4,81 per transactie</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="kpiWalt">&mdash;</div><div class="kpi-sub">resterende looptijd huur</div></div>
+ </div>
+
+ <div class="section-label mt12">Omzetontwikkeling</div>
+ <div class="crumb" id="assetCrumb"></div>
+ <div class="chart-card">
+  <div class="chart-header"><div><div class="chart-title" id="assetChartTitle"></div><div class="chart-subtitle" id="assetChartSub"></div></div></div>
+  <div class="chart-wrap"><canvas id="assetChart"></canvas></div>
+  <div class="hint">Klik op een balk om in te zoomen: jaar &rarr; halfjaar &rarr; kwartaal &rarr; maand &rarr; dag. Vergelijkingsreeks volgt de selector "Vergelijk met".</div>
+ </div>
+
+ <!-- FINANCIËLE VERGELIJKING -->
+ <div class="section-label mt12">Financiële resultaten · <span id="finCompareLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="info-card" style="overflow-x:auto">
+  <table class="data-table">
+   <thead><tr><th>Post</th><th class="tr-right" id="finColA">Actuals</th><th class="tr-right" id="finColB">Budget</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <tbody id="finBody"></tbody>
+  </table>
+  <div class="hint">Vergelijking volgt de scenario-selector bovenaan. Δ = verschil t.o.v. vergelijkingskolom.</div>
+ </div>
+
+ <!-- RENT ROLL PER ASSET -->
+ <div class="section-label mt12">Rent roll · deze asset</div>
+ <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
+</div>
+
+<!-- FINANCIERING -->
+<div class="tab-panel" data-panel="financiering">
+ <div class="section-label">Hypotheek &amp; covenanten · BerlinHyp AG</div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label">Uitstaande hypotheekschuld</div><div class="kpi-val sm">€ 20.000.000</div><div class="kpi-sub">hoofdsom · aflossing volgens schema</div></div>
+  <div class="kpi-card blue"><div class="kpi-label">Loan-to-Value</div><div class="kpi-val sm">60,6%</div><div class="kpi-sub">schuld / taxatiewaarde €33M</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Interest Coverage (ICR)</div><div class="kpi-val sm">1,93×</div><div class="kpi-sub">NRI / rentelasten</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Gemiddelde rentevoet</div><div class="kpi-val sm">5,05%</div><div class="kpi-sub">€1,01M rente / €20M</div></div>
+ </div>
+ <div class="section-label mt12">Covenant-naleving</div>
+ <div class="info-card">
+  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">LTV</div><div style="font-size:11px;color:var(--text2)">huidige waarde 60,6%</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
+  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">ICR</div><div style="font-size:11px;color:var(--text2)">huidige waarde 1,93×</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
+  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">DSCR</div><div style="font-size:11px;color:var(--text2)">huidige waarde 1,32×</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
+  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">EBITDA</div><div style="font-size:11px;color:var(--text2)">huidige waarde €1,95M</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
+  <div class="note amber mt12">Vaste drempels volgen uit de leningsovereenkomst; de Fonds-tab toont al een vooruitblik met illustratieve drempels.</div>
+ </div>
+</div>
+
+<!-- PARTICIPANTEN -->
+<div class="tab-panel" data-panel="participanten">
+ <div class="section-label">Deelnemers &amp; kapitaalstructuur</div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label">Actieve participanten</div><div class="kpi-val">108</div><div class="kpi-sub">1.864 participaties à €10.000</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Gem. participaties p.p.</div><div class="kpi-val sm">17,3</div><div class="kpi-sub">spreiding deelnemers</div></div>
+  <div class="kpi-card amber"><div class="kpi-label">Concentratie top-5</div><div class="kpi-val sm">22,4%</div><div class="kpi-sub">aandeel 5 grootste deelnemers</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Brugfinanciering afgelost</div><div class="kpi-val sm">100%</div><div class="kpi-sub">laatste tranche jan 2026</div></div>
+ </div>
+ <div class="section-label mt12">Verdeling</div>
+ <div class="grid2">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Participaties per distributiekanaal</div></div></div><div class="chart-wrap sm"><canvas id="kanaalChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Uitkeringen per participatie</div><div class="chart-subtitle">Per kwartaal · concept</div></div></div><div class="chart-wrap sm"><canvas id="uitkeringChart"></canvas></div></div>
+ </div>
+</div>
+
+<!-- RAPPORTAGE -->
+<div class="tab-panel" data-panel="rapportage">
+ <div class="section-label">Rapportage genereren · concept</div>
+ <div class="grid2eq">
+  <div class="info-card"><div class="info-card-title">Rapport samenstellen</div>
+   <div class="ctrl" style="margin-bottom:12px"><span class="ctrl-label">Type</span><div class="seg" id="reportSeg" style="width:fit-content"><button data-r="participant" class="active">Participanten</button><button data-r="bank">Bank (covenanten)</button></div></div>
+   <div class="info-row"><span class="info-key">Periode</span><span class="info-val txt">Halfjaar · H1 2026</span></div>
+   <div class="info-row"><span class="info-key">Scenario</span><span class="info-val txt">Actuals</span></div>
+   <div class="info-row"><span class="info-key">Peildatum (as-of)</span><span class="info-val">30-06-2026</span></div>
+   <div class="info-row"><span class="info-key">Status</span><span class="info-val txt"><span class="badge b-gray">concept &mdash; niet bevroren</span></span></div>
+   <div style="margin-top:16px;display:flex;gap:10px"><button class="btn primary" disabled>Genereer PDF</button><button class="btn" disabled>Bevries snapshot</button></div>
+   <div class="note mt12">Gepubliceerde rapporten worden als onveranderlijke snapshot (as-of-datum) bewaard.</div></div>
+  <div class="info-card"><div class="info-card-title">Inhoud rapport <span id="reportAudienceLbl" style="color:var(--orange)"></span></div><div id="reportContent"></div></div>
+ </div>
+</div>
+
+<!-- DATA-IMPORT -->
+<div class="tab-panel" data-panel="import">
+ <div class="section-label">Data inlezen</div>
+
+ <!-- Asset selector (fonds volgt uit globale selector bovenaan) -->
+ <div class="info-card" style="margin-bottom:14px;padding:14px 18px">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+   <div>
+    <div class="ctrl-label" style="margin-bottom:4px">Asset (optioneel)</div>
+    <select id="sel-asset" class="ctrl-select" style="min-width:260px">
+     <option value="">— alle assets</option>
+    </select>
+   </div>
+   <div style="font-size:12px;color:var(--text2);padding-top:18px">
+    Fonds: <span id="import-fund-label" style="font-weight:500;color:var(--text)">—</span>
+   </div>
+  </div>
+ </div>
+
+ <div class="grid3col">
+
+  <div class="upload-card" id="zone-qpark">
+   <div class="uz-icon">🅿️</div>
+   <div class="uz-title">Q-Park omzet &amp; bezetting</div>
+   <div class="uz-sub">maandomzet · transacties · bezetting · .xlsx</div>
+   <div class="uz-filename" id="file-qpark-name"></div>
+   <div class="uz-actions">
+    <label class="btn primary" for="file-qpark">Bestand kiezen</label>
+    <input type="file" id="file-qpark" accept=".xlsx,.xls" style="display:none">
+    <button class="btn danger" id="clear-qpark" style="display:none" onclick="clearFile('qpark')">✕ Wissen</button>
+   </div>
+  </div>
+
+  <div class="upload-card" id="zone-exact">
+   <div class="uz-icon">📊</div>
+   <div class="uz-title">Exact Online export</div>
+   <div class="uz-sub">administratie · grootboek · .xlsx of .csv</div>
+   <div class="uz-filename" id="file-exact-name"></div>
+   <div class="uz-actions">
+    <label class="btn primary" for="file-exact">Bestand kiezen</label>
+    <input type="file" id="file-exact" accept=".xlsx,.xls,.csv" style="display:none">
+    <button class="btn danger" id="clear-exact" style="display:none" onclick="clearFile('exact')">✕ Wissen</button>
+   </div>
+  </div>
+
+  <div class="upload-card" id="zone-argus">
+   <div class="uz-icon">📈</div>
+   <div class="uz-title">Argus forecast</div>
+   <div class="uz-sub">prognosedata · scenario's · .xlsx</div>
+   <div class="uz-filename" id="file-argus-name"></div>
+   <div class="uz-actions">
+    <label class="btn primary" for="file-argus">Bestand kiezen</label>
+    <input type="file" id="file-argus" accept=".xlsx,.xls" style="display:none">
+    <button class="btn danger" id="clear-argus" style="display:none" onclick="clearFile('argus')">✕ Wissen</button>
+   </div>
+  </div>
+
+ </div>
+
+ <!-- Preview -->
+ <div id="import-preview" style="display:none">
+  <div class="section-label mt12">Voorbeeld · eerste 5 rijen</div>
+  <div class="info-card" style="overflow-x:auto">
+   <div id="preview-meta" class="note mb8"></div>
+   <div id="preview-table"></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+   <button class="btn primary" id="btn-upload" onclick="startUpload()">↑ Uploaden naar database</button>
+   <button class="btn" onclick="cancelPreview()">Annuleren</button>
+   <span id="upload-spinner" style="display:none;color:var(--text2);font-size:12px">⏳ Bezig met uploaden…</span>
+  </div>
+ </div>
+
+ <!-- Bevestigingsdialoog -->
+ <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border-radius:var(--r2);padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+   <div style="font-size:15px;font-weight:600;margin-bottom:10px">Weet je het zeker?</div>
+   <div id="confirm-msg" style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px"></div>
+   <div style="display:flex;gap:10px;justify-content:flex-end">
+    <button class="btn" onclick="closeConfirm()">Annuleren</button>
+    <button class="btn primary" onclick="confirmUpload()">Ja, uploaden</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- Import-log -->
+ <div class="section-label mt12">Import-log · deze sessie</div>
+ <div class="info-card">
+  <table class="data-table">
+   <thead><tr><th>Tijdstip</th><th>Bestand</th><th>Type</th><th>Rijen</th><th>Status</th></tr></thead>
+   <tbody id="import-log-body">
+    <tr><td colspan="5" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif;padding:16px">Nog geen imports in deze sessie</td></tr>
+   </tbody>
+  </table>
+ </div>
+</div>
+
+</div>
+</div>
+
+<script>
+// ============ LOCKSCREEN (drempel) ============
+// SHA-256 hash van het wachtwoord. Het wachtwoord zelf staat nergens in de code.
+// LET OP: dit is een drempel, geen echte beveiliging. Wie de broncode of het
+// netwerkverkeer bekijkt kan de Supabase-data alsnog benaderen. Echte auth volgt later.
+const PW_HASH='567719eaa844bb9b88d004fbd8609cd5e5e6360b51a2fb27b3ea975f000819c0';
+
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let _appInited=false;
+function unlockApp(){
+  document.getElementById('lockscreen').style.display='none';
+  document.getElementById('appShell').style.display='';
+  if(!_appInited && typeof initApp==='function'){ _appInited=true; initApp(); }
+}
+async function tryUnlock(){
+  const pw=document.getElementById('lockPw').value;
+  const err=document.getElementById('lockErr');
+  if(!pw){err.textContent='Voer een wachtwoord in.';return;}
+  const h=await sha256(pw);
+  if(h===PW_HASH){
+    sessionStorage.setItem('oim_unlocked','1');
+    unlockApp();
+  } else {
+    err.textContent='Onjuist wachtwoord.';
+    document.getElementById('lockPw').value='';
+  }
+}
+// Init lockscreen-handlers draait aan het einde van het script (na alle definities).
+
+const fmtEUR=n=>'€ '+Math.round(n).toLocaleString('nl-NL');
+const fmtK=n=>'€ '+(n/1000).toLocaleString('nl-NL',{maximumFractionDigits:0})+'k';
+const pct=n=>(n>=0?'+':'')+n.toFixed(1)+'%';
+const MAAND=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+const ORANGE='#EA6C00',BLUE='#2563EB',AMBER='#B45309',RED='#DC2626',GREEN='#16A34A';
+const BASE25=[198000,192000,225000,232000,240000,238000,215000,205000,236000,244000,242000,271354];
+const BASE26=[222000,215000,250000,258000,268000,null,null,null,null,null,null,null];
+const TOT={2023:2520011,2024:2753031};
+const sum25=BASE25.reduce((a,b)=>a+b,0);const shares=BASE25.map(v=>v/sum25);
+function mk(scale,seed){const j=seed===0?(a=>a.map(v=>v==null?null:Math.round(v))):(a=>a.map((v,i)=>v==null?null:Math.round(v*(1+0.05*Math.sin(seed*2.1+i*1.1)))));return {2023:j(shares.map(s=>TOT[2023]*s*scale)),2024:j(shares.map(s=>TOT[2024]*s*scale)),2025:j(BASE25.map(v=>v*scale)),2026:j(BASE26.map(v=>v==null?null:v*scale))};}
+const ASSETS=[
+ {id:'sjp',name:'Sint Jorisplein',city:'Amersfoort',concept:false,tenant:'Q-Park Operations Netherlands B.V.',spaces:448,fv:33000000,fixed:1499630,turn:692976,occ:1.00,walt:16.6,index:'1 jan (CPI)',expiry:'31-12-2042',omzet:mk(1.00,0),scen:{Budget:2900000,Forecast:3065000,'IM-prognose':2800000}},
+ {id:'ctr',name:'Centrum',city:'Utrecht',concept:true,tenant:'Q-Park (concept)',spaces:320,fv:21500000,fixed:1040000,turn:455000,occ:0.94,walt:9.2,index:'1 jan (CPI)',expiry:'30-06-2035',omzet:mk(0.66,1),scen:{Budget:1910000,Forecast:2020000,'IM-prognose':1850000}},
+ {id:'stn',name:'Stationsplein',city:'Amersfoort',concept:true,tenant:'Q-Park (concept)',spaces:210,fv:13200000,fixed:690000,turn:300000,occ:0.97,walt:12.4,index:'1 jan (CPI)',expiry:'31-12-2038',omzet:mk(0.43,2),scen:{Budget:1245000,Forecast:1315000,'IM-prognose':1205000}},
+];
+const byId=id=>ASSETS.find(a=>a.id===id);
+const FUND=[byId('sjp')];
+const YEARS=[2023,2024,2025,2026];
+const AVG_TICKET=4.81, NRI_FACTOR=0.8905;
+const SJP_OPEX={Maintenance:53168,'Property tax':78099,'Owners association':25800,'Asset management':63800,Insurance:19298};
+const SJP_GRI=1499630+692976, SJP_NONOPEX=81450, RATE_ON_VALUE=1010000/33000000;
+const FC={start:425000,buffer:150000,interestM:84200,amortM:33300,distM:50000,horizon:18,nri:{Budget:1920000,Forecast:2050000,'IM-prognose':1760000}};
+const COV={icrMin:1.40,dscrMin:1.20,ltvMax:0.65,interest:1010000,debtService:1410000,debt:20000000,value:33000000};
+
+let state={tab:'fondsen',fundId:null,fundName:null,year:2026,period:'maand',scenario:'Actuals',compare:'prev',h:null,q:null,m:null,assets:new Set(ASSETS.map(a=>a.id)),selAsset:ASSETS[0].id};
+let assetStaticCache={};
+let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart;
+const gridOpt={grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B7280',font:{family:'DM Sans',size:11}}};
+const noLegend={legend:{display:false}};
+const legendBottom={legend:{position:'bottom',labels:{color:'#6B7280',font:{family:'DM Sans',size:11},boxWidth:10,boxHeight:10,usePointStyle:true}}};
+const baseLine=c=>({borderColor:c,backgroundColor:c+'22',borderWidth:2,tension:.3,pointRadius:2});
+
+const selList=()=>state.tab==='asset'?ASSETS.filter(a=>a.id===state.selAsset):ASSETS.filter(a=>state.assets.has(a.id));
+function omzetOf(list,year){return MAAND.map((_,m)=>{let s=0,all=true;list.forEach(a=>{const v=a.omzet[year][m];if(v!=null){s+=v;all=false;}});return all?null:Math.round(s);});}
+function scenTargetOf(list,year,name){if(year!==2026)return null;let t=0,any=false;list.forEach(a=>{const v=(a.scen||{})[name];if(v){t+=v;any=true;}});return any?t:null;}
+const omzetFor=y=>omzetOf(selList(),y);
+const scenTargetFor=(y,n)=>scenTargetOf(selList(),y,n);
+function monthsFilled(a){return a.filter(v=>v!=null).length;}
+function sumArr(a){return a.reduce((x,y)=>x+(y||0),0);}
+function primaryMonthly(year){if(state.scenario==='Actuals')return omzetFor(year);const t=scenTargetFor(year,state.scenario);if(!t)return omzetFor(year);return shares.map(s=>Math.round(t*s));}
+function primLabel(Y){if(state.scenario!=='Actuals'&&scenTargetFor(Y,state.scenario))return `${Y} (${state.scenario})`;return `${Y}${monthsFilled(omzetFor(Y))<12?' (Actuals)':''}`;}
+function resolveBenchFor(list){const Y=state.year;let c=state.compare;if(c==='prev')c='y'+(Y-1);if(c==='none')return null;if(c[0]==='y'){const yr=+c.slice(1);if(yr===Y||!YEARS.includes(yr))return null;const m=omzetOf(list,yr);return {kind:'year',label:''+yr,monthly:m,full:sumArr(m)};}const t=scenTargetOf(list,Y,c);if(!t)return null;return {kind:'scen',label:c,monthly:shares.map(s=>Math.round(t*s)),full:t};}
+const resolveBench=()=>resolveBenchFor(selList());
+
+function dayWeights(year,m){const d=new Date(year,m+1,0).getDate();const w=[];let t=0;for(let i=0;i<d;i++){const dow=new Date(year,m,i+1).getDay();const f=dow===0?0.6:dow===6?1.25:1.0;w.push(f);t+=f;}return {w,t,d};}
+function dailyFor(year,m){const mv=primaryMonthly(year)[m]??sumArr(selList().map(a=>a.omzet[2025][m]));const {w,t,d}=dayWeights(year,m);const out=[];for(let i=0;i<d;i++)out.push(mv*w[i]/t);return out;}
+function lastFilled(year){const a=primaryMonthly(year);for(let i=11;i>=0;i--)if(a[i]!=null)return i;return 11;}
+const half=a=>a?[sumArr(a.slice(0,6))||null,sumArr(a.slice(6,12))||null]:[null,null];
+const quart=a=>a?[0,1,2,3].map(k=>sumArr(a.slice(k*3,k*3+3))||null):[null,null,null,null];
+
+function setActivePeriod(){document.querySelectorAll('#periodSeg button').forEach(b=>b.classList.toggle('active',b.dataset.p===state.period));}
+function renderCrumb(){const el=document.getElementById('assetCrumb');const p=[];p.push(`<a data-lvl="jaar">Alle jaren</a>`);if(['halfjaar','kwartaal','maand','dag'].includes(state.period)){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='halfjaar'?`<span class="cur">${state.year}</span>`:`<a data-lvl="halfjaar">${state.year}</a>`);}if(state.h!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='kwartaal'?`<span class="cur">H${state.h+1}</span>`:`<a data-lvl="kwartaal">H${state.h+1}</a>`);}if(state.q!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='maand'?`<span class="cur">Q${state.q+1}</span>`:`<a data-lvl="maand">Q${state.q+1}</a>`);}if(state.m!=null&&state.period==='dag')p.push(`<span class="sep">&rsaquo;</span><span class="cur">${MAAND[state.m]} ${state.year}</span>`);el.innerHTML=p.join(' ');el.querySelectorAll('a[data-lvl]').forEach(a=>a.onclick=()=>gotoLevel(a.dataset.lvl));}
+function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){state.h=state.q=state.m=null;}else if(lvl==='kwartaal'){state.q=state.m=null;}else if(lvl==='maand'){state.m=null;}setActivePeriod();renderAsset();}
+function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
+
+function renderAsset(){
+  const ctx=document.getElementById('assetChart');if(!ctx)return;if(assetChart)assetChart.destroy();
+  const Y=state.year,prim=primaryMonthly(Y),bench=resolveBench();
+  const title=document.getElementById('assetChartTitle'),sub=document.getElementById('assetChartSub');
+  setActivePeriod();renderCrumb();
+  const yScale={x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}};const cmpTxt=bench?` vs ${bench.label}`:'';let cfg;
+  if(state.period==='jaar'){
+    title.textContent='Parkeeromzet per jaar';sub.textContent='Klik op een jaar om in te zoomen op de halfjaren';
+    const data=YEARS.map(y=>{const a=omzetFor(y);const f=monthsFilled(a),s=sumArr(a);return f<12&&f>0?Math.round(s/f*12):s;});
+    const labels=YEARS.map(y=>monthsFilled(omzetFor(y))<12?y+'*':''+y);
+    cfg={type:'bar',data:{labels,datasets:[{label:'Parkeeromzet',data,backgroundColor:YEARS.map(y=>y===Y?ORANGE+'cc':BLUE+'88'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,onClick:(e,el)=>{if(el.length){state.year=YEARS[el[0].index];document.getElementById('yearSel').value=state.year;state.period='halfjaar';state.h=state.q=state.m=null;updateCtx();renderAsset();}},plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)+(c.label.includes('*')?' (run-rate)':'')}}},scales:yScale}};
+  } else if(state.period==='halfjaar'){
+    title.textContent=`Halfjaren — ${Y}${cmpTxt}`;sub.textContent='Klik op een halfjaar om de kwartalen te zien';
+    const ds=[{type:'bar',label:primLabel(Y),data:half(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,half(bench.monthly)));
+    cfg=wrapCfg(['H1','H2'],ds,yScale,i=>{state.h=i;state.period='kwartaal';state.q=state.m=null;renderAsset();});
+  } else if(state.period==='kwartaal'){
+    title.textContent=`Kwartalen — ${Y}${cmpTxt}`;sub.textContent='Klik op een kwartaal om de maanden te zien';
+    const ds=[{type:'bar',label:primLabel(Y),data:quart(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,quart(bench.monthly)));
+    cfg=wrapCfg(['Q1','Q2','Q3','Q4'],ds,yScale,i=>{state.q=i;state.period='maand';state.m=null;renderAsset();});
+  } else if(state.period==='maand'){
+    const inQ=state.q!=null;const idx=inQ?[state.q*3,state.q*3+1,state.q*3+2]:MAAND.map((_,i)=>i);
+    title.textContent=inQ?`Maanden Q${state.q+1} — ${Y}${cmpTxt}`:`Maanden — ${Y}${cmpTxt}`;sub.textContent='Klik op een maand om door te klikken naar dagniveau';
+    const ds=[{type:'bar',label:primLabel(Y),data:idx.map(i=>prim[i]),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,idx.map(i=>bench.monthly[i])));
+    cfg=wrapCfg(idx.map(i=>MAAND[i]),ds,yScale,k=>{state.m=idx[k];state.period='dag';renderAsset();});
+  } else if(state.period==='dag'){
+    const m=state.m!=null?state.m:lastFilled(Y);const days=dailyFor(Y,m);
+    title.textContent=`Dagen — ${MAAND[m]} ${Y}`;sub.textContent='Laagste niveau · weekenden tonen hogere omzet';
+    cfg={type:'bar',data:{labels:days.map((_,i)=>i+1),datasets:[{label:'Omzet/dag',data:days,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:yScale}};
+  } else {
+    title.textContent=`Cumulatieve omzet YTD — ${Y}${cmpTxt}`;sub.textContent='Lopend totaal vanaf 1 januari';
+    const cum=a=>{let s=0;return (a||[]).map(v=>v==null?null:(s+=v));};
+    const dss=[{label:primLabel(Y),data:cum(prim),...baseLine(ORANGE),spanGaps:false}];if(bench)dss.push({label:bench.label,data:cum(bench.monthly),...baseLine(bench.kind==='year'?BLUE:AMBER),borderDash:[5,4]});
+    cfg={type:'line',data:{labels:MAAND,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:yScale}};
+  }
+  assetChart=new Chart(ctx,cfg);
+}
+function wrapCfg(labels,ds,yScale,onClick){return {type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,onClick:(e,el)=>{if(el.length&&onClick)onClick(el[0].index);},plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':fmtEUR(c.raw))}}},scales:yScale}};}
+function deltaBadge(num,den,label){if(!den)return `<span class="badge b-gray">vs ${label}</span> n.v.t.`;const d=(num/den-1)*100;return `<span class="badge ${d>=0?'b-green':'b-red'}">${pct(d)}</span> vs ${label}`;}
+
+function updateAssetKpis(){
+  const Y=state.year,cur=primaryMonthly(Y),bench=resolveBench();
+  const filled=monthsFilled(cur),full=filled===12,omzet=sumArr(cur);const sel=selList(),n=sel.length;
+  const a=sel[0];
+  document.getElementById('assetTitle').textContent=a?`${a.name}${a.concept?' (concept)':''} · ${a.city}`:'Asset';
+  document.getElementById('kpiOmzetLbl').textContent=`Parkeeromzet ${full?'':'YTD '}${Y}`;
+  document.getElementById('kpiOmzet').textContent=fmtEUR(omzet);
+  document.getElementById('kpiYoY').innerHTML=bench?deltaBadge(omzet,sumArr(bench.monthly.slice(0,filled)),bench.label+(full?'':' (z.p.)')):`<span class="badge b-gray">geen vergelijking</span>`;
+  const rr=full?omzet:Math.round(omzet/filled*12);
+  document.getElementById('kpiRunrateLbl').textContent=full?'Jaaromzet':'Run-rate jaaromzet';
+  document.getElementById('kpiRunrate').textContent=fmtEUR(rr);
+  document.getElementById('kpiVsScen').innerHTML=bench?deltaBadge(rr,bench.full,bench.label):`<span class="badge b-gray">geen vergelijking</span>`;
+  document.getElementById('kpiTransLbl').textContent=`Transacties ${full?'':'YTD '}${Y}`;
+  document.getElementById('kpiTrans').textContent=Math.round(omzet/AVG_TICKET).toLocaleString('nl-NL');
+  // WALT van de geselecteerde asset
+  const waltEl=document.getElementById('kpiWalt');if(waltEl)waltEl.textContent=a?a.walt.toFixed(1)+' jaar':'—';
+  renderAssetStatic(a);
+  renderAssetFinancials();
+  renderRentRollAsset();
+}
+
+// ---- Statische informatie ----
+function renderAssetStatic(a){
+  if(!a)return;
+  const st=assetStaticCache[a.id]||{};
+  // Foto
+  const photoEl=document.getElementById('assetPhoto');
+  if(photoEl){
+    const url=st.photo_url;
+    photoEl.innerHTML=url?`<img src="${url}" alt="${a.name}">`:`<div class="asset-photo-ph">Geen foto beschikbaar</div>`;
+  }
+  // Statische velden (mix: Supabase indien aanwezig, anders uit ASSETS)
+  const rows=[
+    ['Adres', st.address||`${a.city}`],
+    ['Plaats', st.city||a.city],
+    ['Asset-class', st.asset_class||'Parkeren'],
+    ['Aantal plaatsen', (st.capacity||a.spaces)+' parkeerplaatsen'],
+    ['Bouwjaar', st.bouwjaar||'—'],
+    ['Verdiepingen', st.verdiepingen||'—'],
+    ['Energielabel', st.energielabel||'—'],
+    ['Laadpunten', st.laadpunten!=null?st.laadpunten:'—'],
+    ['Huurder', st.huurder||a.tenant],
+    ['Taxatiewaarde', st.latest_fair_value?fmtEUR(st.latest_fair_value):fmtEUR(a.fv)],
+    ['Taxatiedatum', st.fair_value_date||'—'],
+  ];
+  document.getElementById('assetStaticBody').innerHTML=rows.map(([k,v])=>
+    `<div class="static-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+}
+
+// ---- Financiële vergelijkingstabel (scenario-gestuurd) ----
+function renderAssetFinancials(){
+  const sel=selList();const a=sel[0];if(!a)return;
+  const Y=state.year;
+  // Kolom A = actief scenario (selector), Kolom B = vergelijking (compare-selector of Budget)
+  const scenA=state.scenario;
+  // bepaal vergelijkings-scenario: gebruik compare als het een scenario is, anders Budget
+  let scenB = (['Budget','Forecast','IM-prognose'].includes(state.compare))?state.compare:'Budget';
+  if(scenB===scenA) scenB = scenA==='Budget'?'Forecast':'Budget';
+
+  const pnlFor=(scen)=>{
+    // omzet/turn op basis van scenario-target indien beschikbaar, anders actuals run-rate
+    let turn=a.turn;
+    if(scen!=='Actuals' && a.scen && a.scen[scen]){
+      // omzethuur deel schalen naar verhouding van scenario-omzet vs basis
+      const baseOmzet=a.scen['Forecast']||a.turn; // referentie
+      turn=Math.round(a.turn*(a.scen[scen]/(a.scen['Forecast']||a.scen[scen])));
+    }
+    const gri=a.fixed+turn, r=gri/SJP_GRI;
+    let opexTot=0;for(const k in SJP_OPEX)opexTot+=Math.round(SJP_OPEX[k]*r);
+    const nri=gri-opexTot, nonopex=Math.round(SJP_NONOPEX*r), interest=Math.round(a.fv*RATE_ON_VALUE);
+    return {fixed:a.fixed,turn,gri,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};
+  };
+
+  const A=pnlFor(scenA), B=pnlFor(scenB);
+  document.getElementById('finColA').textContent=scenA;
+  document.getElementById('finColB').textContent=scenB;
+  document.getElementById('finCompareLbl').textContent=`${scenA} vs ${scenB} · ${Y}`;
+
+  const rows=[
+    ['Vaste huur', A.fixed, B.fixed],
+    ['Variabele (omzet)huur', A.turn, B.turn],
+    ['Bruto huurinkomsten (GRI)', A.gri, B.gri, true],
+    ['Exploitatielasten', -A.opexTot, -B.opexTot],
+    ['Netto huurinkomsten (NRI)', A.nri, B.nri, true],
+    ['Niet-operationele lasten', -A.nonopex, -B.nonopex],
+    ['Rentelasten', -A.interest, -B.interest],
+    ['Netto resultaat', A.net, B.net, true],
+  ];
+  document.getElementById('finBody').innerHTML=rows.map(([label,va,vb,tot])=>{
+    const d=va-vb, dp=vb?((va/vb-1)*100):null;
+    const dCls=d>=0?'b-green':'b-red';
+    return `<tr class="${tot?'total':''}"><td>${label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d)).replace('€ ','€ ')}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
+  }).join('');
+}
+
+// ---- Rent roll van één asset ----
+function renderRentRollAsset(){
+  const sel=selList();const a=sel[0];if(!a)return;
+  document.getElementById('rrAssetBody').innerHTML=
+    `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;
+}
+
+function renderFonds(){
+  const cur=omzetOf(FUND,state.year);const filled=monthsFilled(cur),full=filled===12,omzet=sumArr(cur);
+  const bench=resolveBenchFor(FUND);
+  document.getElementById('fondsOmzetLbl').textContent=`Parkeeromzet fonds ${full?'':'YTD '}${state.year}`;
+  document.getElementById('fondsOmzet').textContent=fmtEUR(omzet);
+  document.getElementById('fondsOmzetSub').innerHTML=bench?deltaBadge(omzet,sumArr(bench.monthly.slice(0,filled)),bench.label):`<span class="badge b-gray">geen vergelijking</span>`;
+}
+
+// ---- forecast: liquiditeit & covenanten ----
+function fundNRI(){if(state.scenario!=='Actuals')return FC.nri[state.scenario]||FC.nri.Forecast;const cur=omzetOf(FUND,state.year);const f=monthsFilled(cur)||1;const rr=sumArr(cur)/f*12;return Math.round(FC.nri.Forecast*rr/byId('sjp').scen.Forecast);}
+function monthLabels(){const out=[];for(let i=1;i<=FC.horizon;i++){const d=new Date(2026,5+i,1);out.push(MAAND[d.getMonth()]+" '"+String(d.getFullYear()).slice(2));}return out;}
+function liqProj(){const nri=fundNRI();const net=nri/12-FC.interestM-FC.amortM-FC.distM;let bal=FC.start;const pts=[];let breach=-1;for(let i=0;i<FC.horizon;i++){bal+=net;pts.push(Math.round(bal));if(breach<0&&bal<FC.buffer)breach=i;}return {pts,net,nri,breach};}
+function covRows(){const nri=fundNRI();const icr=nri/COV.interest,dscr=nri/COV.debtService,ltv=COV.debt/COV.value;return [
+  {k:'ICR',f:icr.toFixed(2)+'×',th:'≥ '+COV.icrMin.toFixed(2)+'×',ok:icr>=COV.icrMin,hr:(icr/COV.icrMin-1)*100},
+  {k:'DSCR',f:dscr.toFixed(2)+'×',th:'≥ '+COV.dscrMin.toFixed(2)+'×',ok:dscr>=COV.dscrMin,hr:(dscr/COV.dscrMin-1)*100},
+  {k:'LTV',f:(ltv*100).toFixed(1)+'%',th:'≤ '+(COV.ltvMax*100).toFixed(0)+'%',ok:ltv<=COV.ltvMax,hr:(COV.ltvMax/ltv-1)*100}];}
+function renderForecast(){
+  const lp=liqProj(),cov=covRows(),labels=monthLabels(),covBreach=cov.filter(c=>!c.ok);
+  document.getElementById('fcScen').textContent=state.scenario;
+  const banner=document.getElementById('signalBanner');
+  if(lp.breach>=0){banner.className='note red';banner.innerHTML=`&#9888; <strong>Liquiditeitssignaal:</strong> de reserve zakt onder de minimumbuffer (€ ${Math.round(FC.buffer/1000)}k) vanaf <strong>${labels[lp.breach]}</strong> in scenario ${state.scenario}. Overweeg uitkering te temporiseren, kosten te faseren of herfinanciering voor te bereiden.`;}
+  else if(covBreach.length){banner.className='note red';banner.innerHTML=`&#9888; <strong>Covenant-signaal:</strong> ${covBreach.map(c=>c.k).join(', ')} onder de drempel in scenario ${state.scenario}.`;}
+  else if(lp.net<0){banner.className='note amber';banner.innerHTML=`<strong>Let op:</strong> de liquiditeit daalt met ± € ${Math.round(-lp.net/1000)}k/maand, maar blijft de komende 18 maanden boven de buffer. Covenanten ruim binnen norm.`;}
+  else {banner.className='note green';banner.innerHTML=`<strong>Geen knelpunten verwacht.</strong> Liquiditeit en alle covenanten blijven de komende 18 maanden binnen de norm (scenario ${state.scenario}).`;}
+  if(liqChart)liqChart.destroy();
+  const danger=lp.breach>=0,col=danger?RED:ORANGE;
+  liqChart=new Chart(document.getElementById('liqChart'),{type:'line',data:{labels,datasets:[
+    {label:'Liquiditeitsreserve (prognose)',data:lp.pts,borderColor:col,backgroundColor:col+'1f',borderWidth:2,tension:.25,pointRadius:0,fill:true},
+    {label:'Minimumbuffer',data:labels.map(()=>FC.buffer),borderColor:RED,borderDash:[5,4],borderWidth:1.5,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
+  document.getElementById('covRows').innerHTML=cov.map(c=>`<div class="conv-row"><div class="conv-left"><span class="dot" style="background:${c.ok?'var(--green)':'var(--red)'}"></span><div><div style="font-weight:500">${c.k}</div><div style="font-size:11px;color:var(--text2)">prognose ${c.f} · drempel ${c.th}</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px;color:${c.ok?'var(--green)':'var(--red)'}">${c.ok?'OK':'BREACH'}</div><div style="font-size:11px;color:var(--text3)">${c.hr>=0?'+':''}${c.hr.toFixed(0)}% ruimte</div></div></div>`).join('');
+}
+
+function assetPnl(a){const gri=a.fixed+a.turn,r=gri/SJP_GRI;const opex={};let opexTot=0;for(const k in SJP_OPEX){opex[k]=Math.round(SJP_OPEX[k]*r);opexTot+=opex[k];}const nri=gri-opexTot,nonopex=Math.round(SJP_NONOPEX*r),interest=Math.round(a.fv*RATE_ON_VALUE);return {fixed:a.fixed,turn:a.turn,gri,opex,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};}
+function renderPnl(){const sel=selList();const C={fixed:0,turn:0,gri:0,opex:{},opexTot:0,nri:0,nonopex:0,interest:0,net:0};for(const k in SJP_OPEX)C.opex[k]=0;sel.forEach(a=>{const p=assetPnl(a);C.fixed+=p.fixed;C.turn+=p.turn;C.gri+=p.gri;C.opexTot+=p.opexTot;C.nri+=p.nri;C.nonopex+=p.nonopex;C.interest+=p.interest;C.net+=p.net;for(const k in p.opex)C.opex[k]+=p.opex[k];});document.getElementById('pnlYr').textContent=`· ${sel.length} asset(s) · ${state.year} (prognose)`;let r='';r+=`<tr><td>Vaste huur (fixed rental income)</td><td class="tr-right">${fmtEUR(C.fixed)}</td></tr>`;r+=`<tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(C.turn)}</td></tr>`;r+=`<tr class="total"><td>Bruto huurinkomsten (GRI)</td><td class="tr-right">${fmtEUR(C.gri)}</td></tr>`;for(const k in C.opex)r+=`<tr class="sub"><td>${k}</td><td class="tr-right">− ${fmtEUR(C.opex[k])}</td></tr>`;r+=`<tr><td>Totale exploitatielasten</td><td class="tr-right">− ${fmtEUR(C.opexTot)}</td></tr>`;r+=`<tr class="total"><td>Netto huurinkomsten (NRI)</td><td class="tr-right">${fmtEUR(C.nri)}</td></tr>`;r+=`<tr><td>Niet-operationele lasten</td><td class="tr-right">− ${fmtEUR(C.nonopex)}</td></tr>`;r+=`<tr><td>Rentelasten</td><td class="tr-right">− ${fmtEUR(C.interest)}</td></tr>`;r+=`<tr class="total"><td>Netto resultaat</td><td class="tr-right">${fmtEUR(C.net)}</td></tr>`;document.getElementById('pnlBody').innerHTML=r;}
+function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td>Q-Park</td><td class="tr-right">${tS}</td><td class="tr-right">${fmtEUR(tF)}</td><td class="tr-right">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
+
+function portAgg(){const sel=selList();const fv=sel.reduce((s,a)=>s+a.fv,0),fixed=sel.reduce((s,a)=>s+a.fixed,0),turn=sel.reduce((s,a)=>s+a.turn,0),spaces=sel.reduce((s,a)=>s+a.spaces,0),gross=fixed+turn,nri=gross*NRI_FACTOR;const occ=spaces?sel.reduce((s,a)=>s+a.occ*a.spaces,0)/spaces:0;const walt=fv?sel.reduce((s,a)=>s+a.walt*a.fv,0)/fv:0;return {sel,fv,fixed,turn,gross,nri,spaces,occ,walt,bar:gross/fv,nar:nri/fv};}
+function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML=`<tr><td>Vaste huur</td><td class="tr-right">${fmtEUR(a.fixed)}</td></tr><tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(a.turn)}</td></tr><tr class="total"><td>Bruto huur (GRI)</td><td class="tr-right">${fmtEUR(a.gross)}</td></tr><tr><td>Exploitatielasten</td><td class="tr-right">− ${fmtEUR(a.gross-a.nri)}</td></tr><tr class="total"><td>Netto huur (NRI)</td><td class="tr-right">${fmtEUR(a.nri)}</td></tr>`;document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
+
+function renderChips(){
+  // PORTFOLIO: multi-select (assets aan/uit voor consolidatie)
+  const pc=document.getElementById('portChips');
+  if(pc){pc.innerHTML=`<span class="chips-lbl">Assets</span>`+ASSETS.map(a=>{const on=state.assets.has(a.id);return `<button class="chip ${on?'on':''}" data-id="${a.id}"><span class="ck">${on?'✓':''}</span>${a.name}${a.concept?' <small>(concept)</small>':''} <small>· ${a.city}</small></button>`;}).join('');
+    pc.querySelectorAll('.chip').forEach(b=>b.onclick=()=>toggleAsset(b.dataset.id));}
+  // ASSET: single-select (één asset uitlichten)
+  const ac=document.getElementById('assetChips');
+  if(ac){ac.innerHTML=`<span class="chips-lbl">Selecteer asset</span>`+ASSETS.map(a=>{const on=state.selAsset===a.id;return `<button class="chip ${on?'on':''}" data-id="${a.id}"><span class="ck">${on?'●':''}</span>${a.name}${a.concept?' <small>(concept)</small>':''} <small>· ${a.city}</small></button>`;}).join('');
+    ac.querySelectorAll('.chip').forEach(b=>b.onclick=()=>selectAsset(b.dataset.id));}
+}
+function toggleAsset(id){if(state.assets.has(id)){if(state.assets.size>1)state.assets.delete(id);}else state.assets.add(id);state.h=state.q=state.m=null;renderChips();updateCtx();if(state.tab==='asset')renderAsset();if(state.tab==='portefeuille')renderPortfolio();}
+function selectAsset(id){state.selAsset=id;state.h=state.q=state.m=null;renderChips();if(state.tab==='asset'){updateCtx();renderAsset();}}
+
+function renderNav(){if(navChart)navChart.destroy();navChart=new Chart(document.getElementById('navChart'),{type:'line',data:{labels:['H1-25','H2-25','2026p','2027p','2028p'],datasets:[{label:'NAV p.p.',data:[9985,9961.84,10050,10180,10620],...baseLine(ORANGE)},{label:'Inleg',data:[10000,10000,10000,10000,10000],borderColor:'#9CA3AF',borderDash:[5,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': € '+c.raw.toLocaleString('nl-NL',{minimumFractionDigits:2})}}},scales:{x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>'€ '+(v/1000).toFixed(1)+'k'}}}}});}
+function renderKanaal(){if(kanaalChart)kanaalChart.destroy();kanaalChart=new Chart(document.getElementById('kanaalChart'),{type:'doughnut',data:{labels:['FTAC','OIM','Excellent Fondsen'],datasets:[{data:[980,560,324],backgroundColor:[ORANGE,BLUE,AMBER],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.label+': '+c.raw+' part.'}}}}});}
+function renderUitkering(){if(uitkeringChart)uitkeringChart.destroy();uitkeringChart=new Chart(document.getElementById('uitkeringChart'),{type:'bar',data:{labels:['Q2-25','Q3-25','Q4-25','Q1-26'],datasets:[{label:'€ p.p.',data:[110,118,140,125],backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>'€ '+c.raw+' per participatie'}}},scales:{x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>'€ '+v}}}}});}
+
+const reportKPIs={participant:['NAV per participatie','Totaal rendement (direct + indirect)','Uitkering per participatie','Exploitatieresultaat','Parkeeromzet & bezetting','Belangrijkste ontwikkelingen (toelichting)'],bank:['Loan-to-Value (LTV) vs. drempel','Interest Coverage Ratio (ICR) vs. drempel','Debt Service Coverage Ratio (DSCR)','EBITDA vs. drempel','Uitstaande schuld & aflossing','Taxatiewaarde & rentelasten']};
+function renderReport(t){document.getElementById('reportAudienceLbl').textContent='— '+(t==='participant'?'Participanten':'Bank (covenanten)');document.getElementById('reportContent').innerHTML=reportKPIs[t].map(k=>`<div class="info-row"><span class="info-key">${k}</span><span class="info-val txt"><span class="badge b-orange">opgenomen</span></span></div>`).join('');}
+
+function updateCtx(){const t=state.year+' · '+state.period.toUpperCase()+' · '+state.scenario;const ac=document.getElementById('assetCtx');if(ac)ac.textContent=t;document.getElementById('fondsCtx').textContent=t;updateAssetKpis();renderFonds();}
+function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderNav();renderForecast();}}
+function fitScroll(){const el=document.getElementById('mainScroll');if(!el)return;if(window.innerWidth<=880){el.style.maxHeight='none';return;}const top=el.getBoundingClientRect().top;el.style.maxHeight=(window.innerHeight-top)+'px';}
+function activateTab(name){document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x.dataset.t===name));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));state.tab=name;document.getElementById('mainScroll').scrollTop=0;renderTab(name);fitScroll();}
+
+document.getElementById('tabNav').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(!b||b.classList.contains('locked'))return;activateTab(b.dataset.t);});
+document.getElementById('periodSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;gotoLevel(b.dataset.p);});
+document.getElementById('scenSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#scenSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.scenario=b.dataset.s;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
+document.getElementById('reportSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#reportSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderReport(b.dataset.r);});
+function selectFund(fid, fname){
+  state.fundId = fid; state.fundName = fname;
+  const lbl = document.getElementById('fundActiveLabel');
+  if(lbl){ lbl.textContent = fname; lbl.classList.remove('muted'); }
+  // Ontgrendel alle detail-tabs
+  document.querySelectorAll('.tab-btn.locked').forEach(b=>b.classList.remove('locked'));
+  loadAssetStatic();
+  activateTab('fonds');
+}
+
+// Haal statische asset-gegevens op uit Supabase en cache ze op naam
+async function loadAssetStatic(){
+  if(!state.fundId) return;
+  try{
+    const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const ports=await pRes.json(); if(!ports.length)return;
+    const pIds=ports.map(p=>p.id).join(',');
+    const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name,asset_class,address,city,capacity,capacity_unit,construction_year,latest_fair_value,fair_value_date,attributes&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const assets=await aRes.json();
+    // Koppel op naam aan de lokale ASSETS-array
+    assets.forEach(sb=>{
+      const local=ASSETS.find(x=>x.name===sb.name);
+      const key=local?local.id:sb.name;
+      assetStaticCache[key]={
+        address:sb.address, city:sb.city, asset_class:sb.asset_class==='parking'?'Parkeren':sb.asset_class,
+        capacity:sb.capacity, latest_fair_value:sb.latest_fair_value?Number(sb.latest_fair_value):null,
+        fair_value_date:sb.fair_value_date,
+        bouwjaar:sb.construction_year||sb.attributes?.bouwjaar,
+        verdiepingen:sb.attributes?.verdiepingen, energielabel:sb.attributes?.energielabel,
+        laadpunten:sb.attributes?.laadpunten, huurder:sb.attributes?.huurder, photo_url:sb.attributes?.photo_url
+      };
+    });
+    if(state.tab==='asset')renderAsset();
+  }catch(e){console.warn('Statische asset-data laden mislukt:',e);}
+}
+document.querySelectorAll('.fund-card[data-fund]').forEach(c=>c.onclick=()=>{
+  const fid = c.dataset.fundid;
+  const fname = c.querySelector('.fund-name')?.textContent?.trim() || 'Onbekend fonds';
+  if(!fid) return;
+  selectFund(fid, fname);
+});
+window.addEventListener('resize',fitScroll);
+
+const yearSel=document.getElementById('yearSel');
+YEARS.slice().reverse().forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y+(monthsFilled(omzetFor(y))<12?' (lopend)':'');yearSel.appendChild(o);});
+yearSel.value=state.year;
+yearSel.addEventListener('change',e=>{state.year=Number(e.target.value);state.h=state.q=state.m=null;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
+const cmpSel=document.getElementById('cmpSel');
+[['prev','Voorgaand jaar'],['y2025','2025'],['y2024','2024'],['y2023','2023'],['IM-prognose','IM-prognose'],['Budget','Budget'],['Forecast','Forecast'],['none','Geen']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;cmpSel.appendChild(o);});
+cmpSel.value=state.compare;
+cmpSel.addEventListener('change',e=>{state.compare=e.target.value;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
+
+function initApp(){renderChips();updateCtx();renderReport('participant');fitScroll();}
+
+// ---- Lockscreen activeren (na alle definities) ----
+(function(){
+  if(sessionStorage.getItem('oim_unlocked')==='1'){ unlockApp(); }
+  document.getElementById('lockBtn').addEventListener('click',tryUnlock);
+  document.getElementById('lockPw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+  document.getElementById('lockPw').focus();
+})();
+
+// ============ UPLOAD LOGICA ============
+// Laad fonds- en asset-opties bij openen import-tab
+// Laad assets op basis van het actieve fonds (state.fundId)
+async function loadImportSelectors() {
+  // Toon actief fonds-label in de import-tab
+  const lbl = document.getElementById('import-fund-label');
+  if (lbl) lbl.textContent = state.fundName || '—';
+
+  const asel = document.getElementById('sel-asset');
+  asel.innerHTML = '<option value="">— alle assets</option>';
+
+  if (!state.fundId) return;
+  try {
+    const pRes = await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const portfolios = await pRes.json();
+    if (!portfolios.length) return;
+
+    const pIds = portfolios.map(p => p.id).join(',');
+    const aRes = await fetch(`${SB_URL}/rest/v1/assets?select=id,name&portfolio_id=in.(${pIds})&order=name`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const assets = await aRes.json();
+    assets.forEach(a => {
+      const o = document.createElement('option'); o.value = a.id; o.textContent = a.name; asel.appendChild(o);
+    });
+    if (assets.length === 1) asel.value = assets[0].id;
+  } catch(e) { console.warn('Assets laden mislukt:', e); }
+}
+
+// Laad bij klik op import-tab
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tabNav').addEventListener('click', e => {
+    const b = e.target.closest('.tab-btn');
+    if (b && b.dataset.t === 'import') loadImportSelectors();
+  });
+});
+
+const SB_URL  = 'https://cksrnlxfsltivrtveypo.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrc3JubHhmc2x0aXZydHZleXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTk1NDYsImV4cCI6MjA5NjY5NTU0Nn0.VM5Jec2MvCHOJrpEnKGA8Aq3D6NPfLBtPHKWJRxqfb0';
+
+const UPLOAD_TYPES = {
+  qpark: { label: 'Q-Park omzet & bezetting', badge: 'b-orange', source_type: 'qpark_month' },
+  exact: { label: 'Exact Online export',       badge: 'b-blue',   source_type: 'other'       },
+  argus: { label: 'Argus forecast',            badge: 'b-amber',  source_type: 'other'       },
+};
+
+let imp = { type:null, file:null, rows:null };
+let impLog = [];
+
+['qpark','exact','argus'].forEach(t => {
+  document.getElementById('file-'+t).addEventListener('change', e => {
+    const f = e.target.files[0]; if(!f) return;
+    imp = { type:t, file:f, rows:null };
+    document.getElementById('file-'+t+'-name').textContent = f.name;
+    document.getElementById('clear-'+t).style.display = 'inline-flex';
+    document.getElementById('zone-'+t).classList.add('has-file');
+    parseFile(f, t);
+  });
+});
+
+function clearFile(t) {
+  document.getElementById('file-'+t).value = '';
+  document.getElementById('file-'+t+'-name').textContent = '';
+  document.getElementById('clear-'+t).style.display = 'none';
+  document.getElementById('zone-'+t).classList.remove('has-file');
+  if(imp.type === t){ imp = {type:null,file:null,rows:null}; document.getElementById('import-preview').style.display='none'; }
+}
+
+function parseFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let rows;
+      if(file.name.toLowerCase().endsWith('.csv')) {
+        const txt = new TextDecoder('utf-8').decode(e.target.result);
+        rows = txt.trim().split('\n').map(l => l.split(/[;,]/).map(c => c.replace(/^"|"$/g,'').trim()));
+      } else {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      }
+      rows = rows.filter(r => r.some(c => c!=='' && c!=null));
+      imp.rows = rows;
+      showPreview(type, file.name, rows);
+    } catch(err) {
+      showPreviewError('Kon bestand niet lezen: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showPreview(type, filename, rows) {
+  const hdrs = rows[0] || [];
+  const data = rows.slice(1,6);
+  let tbl = '<table class="data-table" style="font-size:11px"><thead><tr>';
+  hdrs.forEach(h => { tbl += `<th>${h}</th>`; });
+  tbl += '</tr></thead><tbody>';
+  data.forEach(row => { tbl += '<tr>'; hdrs.forEach((_,i) => { tbl += `<td>${row[i]??''}</td>`; }); tbl += '</tr>'; });
+  if(rows.length > 6) tbl += `<tr><td colspan="${hdrs.length}" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">… nog ${rows.length-6} rijen</td></tr>`;
+  tbl += '</tbody></table>';
+  document.getElementById('preview-meta').textContent = `📄 ${filename} · ${UPLOAD_TYPES[type].label} · ${rows.length-1} datarijen`;
+  document.getElementById('preview-table').innerHTML = tbl;
+  const el = document.getElementById('import-preview');
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function showPreviewError(msg) {
+  document.getElementById('preview-meta').textContent = '⚠️ ' + msg;
+  document.getElementById('preview-table').innerHTML = '';
+  document.getElementById('import-preview').style.display = 'block';
+}
+
+function cancelPreview() {
+  document.getElementById('import-preview').style.display = 'none';
+  if(imp.type) clearFile(imp.type);
+}
+
+function startUpload() {
+  if(!imp.file || !imp.rows) return;
+  document.getElementById('confirm-msg').innerHTML =
+    `Je staat op het punt <strong>${imp.rows.length-1} rijen</strong> uit <strong>${imp.file.name}</strong> te uploaden als <em>${UPLOAD_TYPES[imp.type].label}</em>.<br><br>Bestaande data voor dezelfde periode wordt overschreven (upsert).`;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+
+async function confirmUpload() {
+  closeConfirm();
+  const spinner = document.getElementById('upload-spinner');
+  const btn = document.getElementById('btn-upload');
+  spinner.style.display = 'inline'; btn.disabled = true;
+  try {
+    const n = await doUpload(imp.type, imp.file, imp.rows);
+    addLogEntry(imp.file.name, imp.type, n, 'verwerkt');
+    document.getElementById('import-preview').style.display = 'none';
+    clearFile(imp.type);
+    toast(`✓ ${n} rijen succesvol geüpload`);
+  } catch(err) {
+    addLogEntry(imp.file.name, imp.type, imp.rows.length-1, 'fout');
+    toast('⚠️ ' + err.message, true);
+  } finally { spinner.style.display='none'; btn.disabled=false; }
+}
+
+async function doUpload(type, file, rows) {
+  const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
+  const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
+
+  // Fonds-context komt uit de actieve state (gekozen op Fondsen-tab)
+  const fundId = state.fundId;
+  if (!fundId) throw new Error('Geen actief fonds. Kies eerst een fonds op het Fondsen-tabblad.');
+
+  const assetId = document.getElementById('sel-asset')?.value || null;
+
+  // Bepaal period_label voor Q-Park
+  let period_label = null;
+  if(type === 'qpark') {
+    const iJ = hdrs.findIndex(h=>h.includes('jaar'));
+    const iM = hdrs.findIndex(h=>h.includes('maand'));
+    if(iJ<0||iM<0) throw new Error('Kolommen "jaar" en "maand" niet gevonden in bestand.');
+    const first = dataRows[0], last = dataRows.at(-1);
+    period_label = `${first[iJ]}-${String(first[iM]).padStart(2,'0')} t/m ${last[iJ]}-${String(last[iM]).padStart(2,'0')}`;
+  }
+
+  // Sla op in imports-logboek
+  await sbPost('imports', [{
+    fund_id:       fundId,
+    source_type:   UPLOAD_TYPES[type].source_type,
+    file_name:     file.name,
+    period_label,
+    status:        'processed',
+    rows_ingested: dataRows.length,
+    message:       (assetId ? `asset_id:${assetId} · ` : '') + `Headers: ${rows[0].join(' | ')}`,
+    imported_by:   'dashboard',
+  }]);
+  return dataRows.length;
+}
+
+async function sbPost(table, payload) {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
+}
+
+function addLogEntry(filename, type, rows, status) {
+  const now = new Date().toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  impLog.unshift({now,filename,type,rows,status});
+  document.getElementById('import-log-body').innerHTML = impLog.map(e=>`
+    <tr>
+     <td>${e.now}</td>
+     <td style="font-family:'DM Sans',sans-serif">${e.filename}</td>
+     <td><span class="badge ${UPLOAD_TYPES[e.type]?.badge||'b-blue'}">${UPLOAD_TYPES[e.type]?.label||e.type}</span></td>
+     <td>${e.rows}</td>
+     <td><span class="badge ${e.status==='verwerkt'?'b-green':'b-red'}">${e.status}</span></td>
+    </tr>`).join('');
+}
+
+function toast(msg, isErr=false) {
+  let t = document.getElementById('_toast');
+  if(!t){ t=document.createElement('div'); t.id='_toast';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:opacity .3s';
+    document.body.appendChild(t); }
+  t.textContent=msg; t.style.background=isErr?'#DC2626':'#16A34A'; t.style.color='#fff'; t.style.opacity='1';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.opacity='0',3500);
+}
+</script>
+</body>
+</html>
