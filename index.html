@@ -214,6 +214,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="kpi-card blue"><div class="kpi-label" id="fondsOmzetLbl">Parkeeromzet fonds</div><div class="kpi-val sm" id="fondsOmzet">&mdash;</div><div class="kpi-sub" id="fondsOmzetSub"></div></div>
   <div class="kpi-card gray"><div class="kpi-label">Uitkering p.p. (Q1-2026)</div><div class="kpi-val sm">€ 125</div><div class="kpi-sub">&asymp; 5,0% direct rendement p.j.</div></div>
  </div>
+ <div class="section-label mt12">Geconsolideerde financiële resultaten · hele portefeuille · <span id="fdFinCompareLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="info-card" style="overflow-x:auto">
+  <table class="data-table">
+   <thead><tr><th>Post</th><th class="tr-right" id="fdFinColA">Actuals</th><th class="tr-right" id="fdFinColB">Budget</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <tbody id="fdFinBody"></tbody>
+  </table>
+  <div class="hint">Hele portefeuille (alle assets) · volgt de scenario-selector bovenaan.</div>
+ </div>
  <div class="section-label">Liquiditeit</div>
  <div class="kpi-grid">
   <div class="kpi-card gray"><div class="kpi-label">Saldo liquiditeitsreserve</div><div class="kpi-val sm">€ 425.000</div><div class="kpi-sub">peildatum 31-05-2026</div></div>
@@ -246,6 +254,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="grid2">
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
+ </div>
+ <div class="section-label mt12">Geconsolideerde financiële resultaten · <span id="pfFinCompareLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="info-card" style="overflow-x:auto">
+  <table class="data-table">
+   <thead><tr><th>Post</th><th class="tr-right" id="pfFinColA">Actuals</th><th class="tr-right" id="pfFinColB">Budget</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <tbody id="pfFinBody"></tbody>
+  </table>
+  <div class="hint">Geconsolideerd over de geselecteerde assets · volgt de scenario-selector bovenaan.</div>
  </div>
  <div class="section-label mt12">Rent roll · alle geselecteerde assets</div>
  <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Asset</th><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrBody"></tbody></table></div>
@@ -298,6 +314,41 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <!-- RENT ROLL PER ASSET -->
  <div class="section-label mt12">Rent roll · deze asset</div>
  <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
+
+ <!-- PARKEERTARIEVEN -->
+ <div class="section-label mt12">Parkeertarieven · <span id="tariffDateLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="grid2">
+  <div class="info-card" style="overflow-x:auto">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="info-card-title" style="margin-bottom:0">Huidige tarieven</div>
+    <button class="btn primary" style="padding:5px 12px;font-size:12px" onclick="openTariffDialog()">Tarief wijzigen</button>
+   </div>
+   <table class="data-table"><thead><tr><th>Categorie</th><th>Tarief</th><th class="tr-right">Eenheid</th><th class="tr-right">€/uur</th></tr></thead><tbody id="tariffBody"></tbody></table>
+   <div class="hint">Effectief uurtarief = (60 / minuten) × bedrag. Dagtarief is een vast bedrag.</div>
+  </div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Verloop effectief uurtarief</div><div class="chart-subtitle">per categorie · op basis van ingangsdatums</div></div></div><div class="chart-wrap"><canvas id="tariffChart"></canvas></div></div>
+ </div>
+
+ <!-- Tarief-wijzig dialoog -->
+ <div id="tariff-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border-radius:var(--r2);padding:26px 30px;max-width:560px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
+   <div style="font-size:15px;font-weight:600;margin-bottom:4px">Nieuwe tarieven invoeren</div>
+   <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Geef de ingangsdatum en de bedragen per categorie. Het uurtarief wordt automatisch berekend.</div>
+   <div style="margin-bottom:14px">
+    <div class="ctrl-label" style="margin-bottom:4px">Ingangsdatum</div>
+    <input type="date" id="tf-date" class="ctrl-select" style="width:180px">
+   </div>
+   <table class="data-table" style="margin-bottom:16px">
+    <thead><tr><th>Categorie</th><th class="tr-right">Bedrag (€)</th><th class="tr-right">Per (min)</th><th class="tr-right">€/uur</th></tr></thead>
+    <tbody id="tf-rows"></tbody>
+   </table>
+   <div id="tf-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+   <div style="display:flex;gap:10px;justify-content:flex-end">
+    <button class="btn" onclick="closeTariffDialog()">Annuleren</button>
+    <button class="btn primary" id="tf-save" onclick="confirmTariffSave()">Opslaan</button>
+   </div>
+  </div>
+ </div>
 </div>
 
 <!-- FINANCIERING -->
@@ -509,6 +560,10 @@ const COV={icrMin:1.40,dscrMin:1.20,ltvMax:0.65,interest:1010000,debtService:141
 
 let state={tab:'fondsen',fundId:null,fundName:null,year:2026,period:'maand',scenario:'Actuals',compare:'prev',h:null,q:null,m:null,assets:new Set(ASSETS.map(a=>a.id)),selAsset:ASSETS[0].id};
 let assetStaticCache={};
+let tariffCache={};
+let assetUuidMap={};
+let tariffChart=null;
+const SJP_ASSET_UUID='00000000-0000-0000-0000-000000000003';
 let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart;
 const gridOpt={grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B7280',font:{family:'DM Sans',size:11}}};
 const noLegend={legend:{display:false}};
@@ -596,6 +651,124 @@ function updateAssetKpis(){
   renderAssetStatic(a);
   renderAssetFinancials();
   renderRentRollAsset();
+  renderAssetTariffs();
+}
+
+// ---- Parkeertarieven: tabel (ruwe waarde) + verloopgrafiek (uurtarief) ----
+const CAT_COLORS={1:'#E8590C',2:'#1971C2',3:'#2F9E44',4:'#868E96'};
+function renderAssetTariffs(){
+  const a=selList()[0]; if(!a)return;
+  const all=tariffCache[a.id]||[];
+  const tbody=document.getElementById('tariffBody'); if(!tbody)return;
+
+  if(!all.length){
+    tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">Geen tarieven geladen</td></tr>`;
+    document.getElementById('tariffDateLbl').textContent='';
+    if(tariffChart){tariffChart.destroy();tariffChart=null;}
+    return;
+  }
+
+  // Huidige tarieven = laatste versie per categorie
+  const latest={};
+  all.forEach(t=>{ if(!latest[t.category]||t.valid_from>latest[t.category].valid_from) latest[t.category]=t; });
+  const cats=Object.values(latest).sort((x,y)=>x.category-y.category);
+
+  document.getElementById('tariffDateLbl').textContent='geldig vanaf '+(cats[0]?.valid_from||'');
+  tbody.innerHTML=cats.map(t=>{
+    const eenheid=t.is_day_rate?'per dag':`per ${t.unit_minutes} min`;
+    const tarief=t.is_day_rate?fmtEUR(t.amount):`€ ${Number(t.amount).toFixed(2).replace('.',',')}`;
+    const uur=t.is_day_rate?'—':`€ ${Number(t.hourly_rate).toFixed(2).replace('.',',')}`;
+    return `<tr><td>${t.category}. ${t.category_label}</td><td>${tarief}</td><td class="tr-right">${eenheid}</td><td class="tr-right">${uur}</td></tr>`;
+  }).join('');
+
+  // Verloopgrafiek: effectief uurtarief per categorie over ingangsdatums (alleen niet-dagtarief)
+  const dates=[...new Set(all.filter(t=>!t.is_day_rate).map(t=>t.valid_from))].sort();
+  const datasets=[1,2,3].map(cat=>{
+    const hist=all.filter(t=>t.category===cat&&!t.is_day_rate).sort((x,y)=>x.valid_from<y.valid_from?-1:1);
+    // step-functie: voor elke datum het geldende uurtarief
+    const data=dates.map(d=>{ let v=null; hist.forEach(h=>{ if(h.valid_from<=d) v=Number(h.hourly_rate); }); return v; });
+    const lbl=latest[cat]?.category_label||('Cat '+cat);
+    return {label:`${cat}. ${lbl}`,data,borderColor:CAT_COLORS[cat],backgroundColor:CAT_COLORS[cat]+'22',tension:.1,stepped:true,pointRadius:3};
+  });
+
+  if(tariffChart)tariffChart.destroy();
+  tariffChart=new Chart(document.getElementById('tariffChart'),{
+    type:'line',
+    data:{labels:dates,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': € '+Number(c.raw).toFixed(2).replace('.',',')+'/uur'}}},
+      scales:{x:{...gridOpt},y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>'€ '+v.toFixed(2).replace('.',',')}}}}
+  });
+}
+
+// ---- Tarief-wijzig dialoog ----
+const TARIFF_CATS=[{c:1,l:'Ma t/m wo'},{c:2,l:'Do, vr, zo'},{c:3,l:'Zaterdag'},{c:4,l:'Dagtarief'}];
+function openTariffDialog(){
+  const a=selList()[0]; if(!a)return;
+  const all=tariffCache[a.id]||[];
+  // huidige (laatste) waarde per categorie als startwaarde
+  const latest={};
+  all.forEach(t=>{ if(!latest[t.category]||t.valid_from>latest[t.category].valid_from) latest[t.category]=t; });
+
+  document.getElementById('tf-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('tf-error').textContent='';
+  document.getElementById('tf-rows').innerHTML=TARIFF_CATS.map(({c,l})=>{
+    const cur=latest[c]||{};
+    const isDay=c===4;
+    const amount=cur.amount!=null?Number(cur.amount).toFixed(2):(isDay?'18.00':'1.50');
+    const mins=isDay?'':(cur.unit_minutes!=null?cur.unit_minutes:'');
+    return `<tr>
+      <td>${c}. ${l}${isDay?' <small style="color:var(--text3)">(vast bedrag)</small>':''}</td>
+      <td class="tr-right"><input type="number" step="0.01" min="0" id="tf-amt-${c}" value="${amount}" class="ctrl-select" style="width:90px;text-align:right" oninput="recalcTariffRow(${c})"></td>
+      <td class="tr-right">${isDay?'<span style="color:var(--text3)">n.v.t.</span>':`<input type="number" step="1" min="1" id="tf-min-${c}" value="${mins}" class="ctrl-select" style="width:70px;text-align:right" oninput="recalcTariffRow(${c})">`}</td>
+      <td class="tr-right" id="tf-hr-${c}" style="font-family:'DM Mono',monospace">—</td>
+    </tr>`;
+  }).join('');
+  TARIFF_CATS.forEach(({c})=>recalcTariffRow(c));
+  document.getElementById('tariff-overlay').style.display='flex';
+}
+function recalcTariffRow(c){
+  if(c===4){document.getElementById('tf-hr-4').textContent='—';return;}
+  const amt=parseFloat(document.getElementById('tf-amt-'+c).value);
+  const min=parseFloat(document.getElementById('tf-min-'+c).value);
+  const el=document.getElementById('tf-hr-'+c);
+  el.textContent=(amt>0&&min>0)?'€ '+((60/min)*amt).toFixed(2).replace('.',','):'—';
+}
+function closeTariffDialog(){document.getElementById('tariff-overlay').style.display='none';}
+
+async function confirmTariffSave(){
+  const a=selList()[0]; if(!a)return;
+  const assetUuid=assetUuidMap[a.id]||SJP_ASSET_UUID;
+  const err=document.getElementById('tf-error');
+  const date=document.getElementById('tf-date').value;
+  if(!date){err.textContent='Kies een ingangsdatum.';return;}
+
+  // Bouw payload, valideer
+  const rows=[];
+  for(const {c,l} of TARIFF_CATS){
+    const amt=parseFloat(document.getElementById('tf-amt-'+c).value);
+    if(!(amt>0)){err.textContent=`Categorie ${c}: vul een geldig bedrag in.`;return;}
+    if(c===4){
+      rows.push({asset_id:assetUuid,category:4,category_label:l,amount:amt,unit_minutes:null,is_day_rate:true,hourly_rate:null,valid_from:date});
+    } else {
+      const min=parseFloat(document.getElementById('tf-min-'+c).value);
+      if(!(min>0)){err.textContent=`Categorie ${c}: vul een geldige tijdseenheid in.`;return;}
+      rows.push({asset_id:assetUuid,category:c,category_label:l,amount:amt,unit_minutes:min,is_day_rate:false,hourly_rate:Math.round((60/min)*amt*100)/100,valid_from:date});
+    }
+  }
+
+  if(!confirm(`Weet je het zeker? Je voegt 4 nieuwe tarieven toe met ingangsdatum ${date}. De bestaande historie blijft behouden.`))return;
+
+  const btn=document.getElementById('tf-save'); btn.disabled=true; btn.textContent='Opslaan…';
+  try{
+    await sbPost('parking_tariffs', rows);
+    // Herlaad tarieven en sluit
+    await loadAssetStatic();
+    closeTariffDialog();
+    toast('✓ Nieuwe tarieven opgeslagen');
+  }catch(e){
+    err.textContent='Opslaan mislukt: '+e.message;
+  }finally{ btn.disabled=false; btn.textContent='Opslaan'; }
 }
 
 // ---- Statische informatie ----
@@ -626,34 +799,37 @@ function renderAssetStatic(a){
     `<div class="static-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 }
 
-// ---- Financiële vergelijkingstabel (scenario-gestuurd) ----
-function renderAssetFinancials(){
-  const sel=selList();const a=sel[0];if(!a)return;
+// ---- Financiële vergelijkingstabel (scenario-gestuurd, herbruikbaar) ----
+// Berekent P&L voor één asset onder een scenario
+function pnlForAsset(a, scen){
+  let turn=a.turn;
+  if(scen!=='Actuals' && a.scen && a.scen[scen]){
+    turn=Math.round(a.turn*(a.scen[scen]/(a.scen['Forecast']||a.scen[scen])));
+  }
+  const gri=a.fixed+turn, r=gri/SJP_GRI;
+  let opexTot=0;for(const k in SJP_OPEX)opexTot+=Math.round(SJP_OPEX[k]*r);
+  const nri=gri-opexTot, nonopex=Math.round(SJP_NONOPEX*r), interest=Math.round(a.fv*RATE_ON_VALUE);
+  return {fixed:a.fixed,turn,gri,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};
+}
+// Sommeer P&L over een lijst assets onder een scenario
+function pnlForList(list, scen){
+  const acc={fixed:0,turn:0,gri:0,opexTot:0,nri:0,nonopex:0,interest:0,net:0};
+  list.forEach(a=>{const p=pnlForAsset(a,scen);for(const k in acc)acc[k]+=p[k];});
+  return acc;
+}
+// Render de vergelijkingstabel in opgegeven element-IDs voor een gegeven asset-lijst
+function renderFinancialsTable(list, ids){
+  if(!list.length)return;
   const Y=state.year;
-  // Kolom A = actief scenario (selector), Kolom B = vergelijking (compare-selector of Budget)
   const scenA=state.scenario;
-  // bepaal vergelijkings-scenario: gebruik compare als het een scenario is, anders Budget
-  let scenB = (['Budget','Forecast','IM-prognose'].includes(state.compare))?state.compare:'Budget';
-  if(scenB===scenA) scenB = scenA==='Budget'?'Forecast':'Budget';
+  let scenB=(['Budget','Forecast','IM-prognose'].includes(state.compare))?state.compare:'Budget';
+  if(scenB===scenA) scenB=scenA==='Budget'?'Forecast':'Budget';
 
-  const pnlFor=(scen)=>{
-    // omzet/turn op basis van scenario-target indien beschikbaar, anders actuals run-rate
-    let turn=a.turn;
-    if(scen!=='Actuals' && a.scen && a.scen[scen]){
-      // omzethuur deel schalen naar verhouding van scenario-omzet vs basis
-      const baseOmzet=a.scen['Forecast']||a.turn; // referentie
-      turn=Math.round(a.turn*(a.scen[scen]/(a.scen['Forecast']||a.scen[scen])));
-    }
-    const gri=a.fixed+turn, r=gri/SJP_GRI;
-    let opexTot=0;for(const k in SJP_OPEX)opexTot+=Math.round(SJP_OPEX[k]*r);
-    const nri=gri-opexTot, nonopex=Math.round(SJP_NONOPEX*r), interest=Math.round(a.fv*RATE_ON_VALUE);
-    return {fixed:a.fixed,turn,gri,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};
-  };
-
-  const A=pnlFor(scenA), B=pnlFor(scenB);
-  document.getElementById('finColA').textContent=scenA;
-  document.getElementById('finColB').textContent=scenB;
-  document.getElementById('finCompareLbl').textContent=`${scenA} vs ${scenB} · ${Y}`;
+  const A=pnlForList(list,scenA), B=pnlForList(list,scenB);
+  const colA=document.getElementById(ids.colA), colB=document.getElementById(ids.colB), lbl=document.getElementById(ids.lbl), body=document.getElementById(ids.body);
+  if(colA)colA.textContent=scenA;
+  if(colB)colB.textContent=scenB;
+  if(lbl)lbl.textContent=`${scenA} vs ${scenB} · ${Y}`;
 
   const rows=[
     ['Vaste huur', A.fixed, B.fixed],
@@ -665,11 +841,15 @@ function renderAssetFinancials(){
     ['Rentelasten', -A.interest, -B.interest],
     ['Netto resultaat', A.net, B.net, true],
   ];
-  document.getElementById('finBody').innerHTML=rows.map(([label,va,vb,tot])=>{
+  if(body)body.innerHTML=rows.map(([label,va,vb,tot])=>{
     const d=va-vb, dp=vb?((va/vb-1)*100):null;
     const dCls=d>=0?'b-green':'b-red';
-    return `<tr class="${tot?'total':''}"><td>${label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d)).replace('€ ','€ ')}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
+    return `<tr class="${tot?'total':''}"><td>${label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d))}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
   }).join('');
+}
+// Asset-tab: één geselecteerde asset
+function renderAssetFinancials(){
+  renderFinancialsTable(selList(), {colA:'finColA',colB:'finColB',lbl:'finCompareLbl',body:'finBody'});
 }
 
 // ---- Rent roll van één asset ----
@@ -685,6 +865,7 @@ function renderFonds(){
   document.getElementById('fondsOmzetLbl').textContent=`Parkeeromzet fonds ${full?'':'YTD '}${state.year}`;
   document.getElementById('fondsOmzet').textContent=fmtEUR(omzet);
   document.getElementById('fondsOmzetSub').innerHTML=bench?deltaBadge(omzet,sumArr(bench.monthly.slice(0,filled)),bench.label):`<span class="badge b-gray">geen vergelijking</span>`;
+  renderFinancialsTable(ASSETS,{colA:'fdFinColA',colB:'fdFinColB',lbl:'fdFinCompareLbl',body:'fdFinBody'});
 }
 
 // ---- forecast: liquiditeit & covenanten ----
@@ -717,7 +898,7 @@ function renderPnl(){const sel=selList();const C={fixed:0,turn:0,gri:0,opex:{},o
 function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td>Q-Park</td><td class="tr-right">${tS}</td><td class="tr-right">${fmtEUR(tF)}</td><td class="tr-right">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
 
 function portAgg(){const sel=selList();const fv=sel.reduce((s,a)=>s+a.fv,0),fixed=sel.reduce((s,a)=>s+a.fixed,0),turn=sel.reduce((s,a)=>s+a.turn,0),spaces=sel.reduce((s,a)=>s+a.spaces,0),gross=fixed+turn,nri=gross*NRI_FACTOR;const occ=spaces?sel.reduce((s,a)=>s+a.occ*a.spaces,0)/spaces:0;const walt=fv?sel.reduce((s,a)=>s+a.walt*a.fv,0)/fv:0;return {sel,fv,fixed,turn,gross,nri,spaces,occ,walt,bar:gross/fv,nar:nri/fv};}
-function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML=`<tr><td>Vaste huur</td><td class="tr-right">${fmtEUR(a.fixed)}</td></tr><tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(a.turn)}</td></tr><tr class="total"><td>Bruto huur (GRI)</td><td class="tr-right">${fmtEUR(a.gross)}</td></tr><tr><td>Exploitatielasten</td><td class="tr-right">− ${fmtEUR(a.gross-a.nri)}</td></tr><tr class="total"><td>Netto huur (NRI)</td><td class="tr-right">${fmtEUR(a.nri)}</td></tr>`;document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
+function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML=`<tr><td>Vaste huur</td><td class="tr-right">${fmtEUR(a.fixed)}</td></tr><tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(a.turn)}</td></tr><tr class="total"><td>Bruto huur (GRI)</td><td class="tr-right">${fmtEUR(a.gross)}</td></tr><tr><td>Exploitatielasten</td><td class="tr-right">− ${fmtEUR(a.gross-a.nri)}</td></tr><tr class="total"><td>Netto huur (NRI)</td><td class="tr-right">${fmtEUR(a.nri)}</td></tr>`;document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderFinancialsTable(selList(),{colA:'pfFinColA',colB:'pfFinColB',lbl:'pfFinCompareLbl',body:'pfFinBody'});if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
 
 function renderChips(){
   // PORTFOLIO: multi-select (assets aan/uit voor consolidatie)
@@ -782,6 +963,25 @@ async function loadAssetStatic(){
     });
     if(state.tab==='asset')renderAsset();
   }catch(e){console.warn('Statische asset-data laden mislukt:',e);}
+  // Laad parkeertarieven (alle historie) en cache per asset-id
+  try{
+    const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const ports=await pRes.json(); if(!ports.length)return;
+    const pIds=ports.map(p=>p.id).join(',');
+    const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const sbAssets=await aRes.json();
+    const sbIds=sbAssets.map(a=>a.id).join(',');
+    const tRes=await fetch(`${SB_URL}/rest/v1/parking_tariffs?select=*&asset_id=in.(${sbIds})&order=category,valid_from`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const tariffs=await tRes.json();
+    // groepeer per lokale asset-id
+    tariffCache={};
+    sbAssets.forEach(sb=>{
+      const local=ASSETS.find(x=>x.name===sb.name); const key=local?local.id:sb.id;
+      tariffCache[key]=tariffs.filter(t=>t.asset_id===sb.id);
+      assetUuidMap[key]=sb.id;
+    });
+    if(state.tab==='asset')renderAssetTariffs();
+  }catch(e){console.warn('Tarieven laden mislukt:',e);}
 }
 document.querySelectorAll('.fund-card[data-fund]').forEach(c=>c.onclick=()=>{
   const fid = c.dataset.fundid;
