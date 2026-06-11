@@ -565,6 +565,7 @@ let assetStaticCache={};
 let tariffCache={};
 let assetUuidMap={};
 let tariffChart=null;
+let _tariffLoading=false;
 const SJP_ASSET_UUID='00000000-0000-0000-0000-000000000003';
 let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart;
 const gridOpt={grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B7280',font:{family:'DM Sans',size:11}}};
@@ -596,6 +597,11 @@ function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){stat
 function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
 
 function renderAsset(){
+  // Als de asset-data nog niet geladen is (bijv. na herladen met actieve sessie), laad alsnog
+  if(state.fundId && Object.keys(tariffCache).length===0 && !_tariffLoading){
+    _tariffLoading=true;
+    loadAssetStatic().finally(()=>{_tariffLoading=false;});
+  }
   const ctx=document.getElementById('assetChart');if(!ctx)return;if(assetChart)assetChart.destroy();
   const Y=state.year,prim=primaryMonthly(Y),bench=resolveBench();
   const title=document.getElementById('assetChartTitle'),sub=document.getElementById('assetChartSub');
@@ -660,11 +666,16 @@ function updateAssetKpis(){
 const CAT_COLORS={1:'#E8590C',2:'#1971C2',3:'#2F9E44',4:'#868E96'};
 function renderAssetTariffs(){
   const a=selList()[0]; if(!a)return;
-  const all=tariffCache[a.id]||[];
+  // Probeer meerdere sleutels: lokale id, gemapte UUID
+  let all=tariffCache[a.id];
+  if(!all || !all.length){ const uuid=assetUuidMap[a.id]; if(uuid && tariffCache[uuid]) all=tariffCache[uuid]; }
+  all=all||[];
   const tbody=document.getElementById('tariffBody'); if(!tbody)return;
 
   if(!all.length){
-    tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">Geen tarieven geladen</td></tr>`;
+    const cacheKeys=Object.keys(tariffCache).join(', ')||'(leeg)';
+    const diag=state.fundId?`cache-sleutels: ${cacheKeys} · gezocht: ${a.id}`:'geen fonds geselecteerd';
+    tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">Geen tarieven geladen<br><small style="opacity:.6">${diag}</small></td></tr>`;
     document.getElementById('tariffDateLbl').textContent='';
     if(tariffChart){tariffChart.destroy();tariffChart=null;}
     return;
@@ -968,8 +979,7 @@ async function loadAssetStatic(){
     // Koppel op naam aan de lokale ASSETS-array (tolerant voor naamsverschillen)
     assets.forEach(sb=>{
       const local=matchLocalAsset(sb.name);
-      const key=local?local.id:sb.name;
-      assetStaticCache[key]={
+      const data={
         address:sb.address, city:sb.city, asset_class:sb.asset_class==='parking'?'Parkeren':sb.asset_class,
         capacity:sb.capacity, latest_fair_value:sb.latest_fair_value?Number(sb.latest_fair_value):null,
         fair_value_date:sb.fair_value_date,
@@ -977,7 +987,14 @@ async function loadAssetStatic(){
         verdiepingen:sb.attributes?.verdiepingen, energielabel:sb.attributes?.energielabel,
         laadpunten:sb.attributes?.laadpunten, huurder:sb.attributes?.huurder, photo_url:sb.attributes?.photo_url
       };
+      assetStaticCache[sb.id]=data;
+      if(local) assetStaticCache[local.id]=data;
     });
+    // Single-asset fallback: koppel direct aan geselecteerde asset
+    if(assets.length===1 && state.selAsset && !assetStaticCache[state.selAsset]){
+      const sb=assets[0];
+      assetStaticCache[state.selAsset]=assetStaticCache[sb.id];
+    }
     if(state.tab==='asset')renderAsset();
   }catch(e){console.warn('Statische asset-data laden mislukt:',e);}
   // Laad parkeertarieven (alle historie) en cache per asset-id
@@ -993,10 +1010,19 @@ async function loadAssetStatic(){
     // groepeer per lokale asset-id
     tariffCache={};
     sbAssets.forEach(sb=>{
-      const local=matchLocalAsset(sb.name); const key=local?local.id:sb.id;
-      tariffCache[key]=tariffs.filter(t=>t.asset_id===sb.id);
-      assetUuidMap[key]=sb.id;
+      const local=matchLocalAsset(sb.name);
+      const tlist=tariffs.filter(t=>t.asset_id===sb.id);
+      // Cache onder zowel de Supabase-UUID als de lokale id (indien match)
+      tariffCache[sb.id]=tlist;
+      assetUuidMap[sb.id]=sb.id;
+      if(local){ tariffCache[local.id]=tlist; assetUuidMap[local.id]=sb.id; }
     });
+    // Fallback: als er precies één asset in Supabase staat en één lokaal geselecteerd,
+    // koppel die direct (lost naam-mismatch definitief op)
+    if(sbAssets.length===1 && state.selAsset){
+      tariffCache[state.selAsset]=tariffs;
+      assetUuidMap[state.selAsset]=sbAssets[0].id;
+    }
     if(state.tab==='asset')renderAssetTariffs();
   }catch(e){console.warn('Tarieven laden mislukt:',e);}
 }
