@@ -452,7 +452,10 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="upload-card" id="zone-argus">
    <div class="uz-icon">📈</div>
    <div class="uz-title">Argus forecast</div>
-   <div class="uz-sub">prognosedata · scenario's · .xlsx</div>
+   <div class="uz-sub">volledige cashflow · vrij scenario · .xlsx</div>
+   <div style="margin:4px 0;width:100%">
+    <input type="text" id="argus-scenario-name" class="ctrl-select" style="font-size:12px;width:100%;box-sizing:border-box" placeholder="Scenarionaam, bijv. Business Plan IM">
+   </div>
    <div class="uz-filename" id="file-argus-name"></div>
    <div class="uz-actions">
     <label class="btn primary" for="file-argus">Bestand kiezen</label>
@@ -1148,14 +1151,16 @@ function parseFile(file, type) {
       if(file.name.toLowerCase().endsWith('.csv')) {
         const txt = new TextDecoder('utf-8').decode(e.target.result);
         rows = txt.trim().split('\n').map(l => l.split(/[;,]/).map(c => c.replace(/^"|"$/g,'').trim()));
+        imp.rawRows = rows;
       } else {
         const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
         const ws = wb.Sheets[wb.SheetNames[0]];
         rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        imp.rawRows = rows; // ongefilterd, met behoud van rijposities (nodig voor Argus)
       }
-      rows = rows.filter(r => r.some(c => c!=='' && c!=null));
-      imp.rows = rows;
-      showPreview(type, file.name, rows);
+      const filtered = rows.filter(r => r.some(c => c!=='' && c!=null));
+      imp.rows = filtered;
+      showPreview(type, file.name, filtered);
     } catch(err) {
       showPreviewError('Kon bestand niet lezen: ' + err.message);
     }
@@ -1192,8 +1197,15 @@ function cancelPreview() {
 
 function startUpload() {
   if(!imp.file || !imp.rows) return;
-  document.getElementById('confirm-msg').innerHTML =
-    `Je staat op het punt <strong>${imp.rows.length-1} rijen</strong> uit <strong>${imp.file.name}</strong> te uploaden als <em>${UPLOAD_TYPES[imp.type].label}</em>.<br><br>Bestaande data voor dezelfde periode wordt overschreven (upsert).`;
+  if(imp.type==='argus'){
+    const nm=(document.getElementById('argus-scenario-name')?.value||'').trim();
+    if(!nm){ alert('Geef eerst een scenarionaam op bij het Argus-blok.'); return; }
+    document.getElementById('confirm-msg').innerHTML =
+      `Je staat op het punt het bestand <strong>${imp.file.name}</strong> in te lezen als scenario <strong>"${nm}"</strong>.<br><br>De volledige cashflow (alle line items × alle perioden) wordt opgeslagen en komt beschikbaar in de vergelijk-dropdown.`;
+  } else {
+    document.getElementById('confirm-msg').innerHTML =
+      `Je staat op het punt <strong>${imp.rows.length-1} rijen</strong> uit <strong>${imp.file.name}</strong> te uploaden als <em>${UPLOAD_TYPES[imp.type].label}</em>.<br><br>Bestaande data voor dezelfde periode wordt overschreven (upsert).`;
+  }
   document.getElementById('confirm-overlay').classList.add('open');
 }
 
@@ -1219,13 +1231,14 @@ async function confirmUpload() {
 }
 
 async function doUpload(type, file, rows) {
-  const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
-  const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
-
-  // Fonds-context komt uit de actieve state (gekozen op Fondsen-tab)
   const fundId = state.fundId;
   if (!fundId) throw new Error('Geen actief fonds. Kies eerst een fonds op het Fondsen-tabblad.');
 
+  // Argus: volledige cashflow parsen en als scenario wegschrijven
+  if(type==='argus') return await uploadArgusScenario(fundId, file);
+
+  const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
+  const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
   const assetId = document.getElementById('sel-asset')?.value || null;
 
   // Bepaal period_label voor Q-Park
@@ -1238,7 +1251,6 @@ async function doUpload(type, file, rows) {
     period_label = `${first[iJ]}-${String(first[iM]).padStart(2,'0')} t/m ${last[iJ]}-${String(last[iM]).padStart(2,'0')}`;
   }
 
-  // Sla op in imports-logboek
   await sbPost('imports', [{
     fund_id:       fundId,
     source_type:   UPLOAD_TYPES[type].source_type,
@@ -1250,6 +1262,105 @@ async function doUpload(type, file, rows) {
     imported_by:   'dashboard',
   }]);
   return dataRows.length;
+}
+
+// ---- Argus cashflow parser ----
+const MONTH_NUM={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+function lastDayOfMonth(y,m){ return new Date(y,m,0).getDate(); }
+function parseArgusMonthYear(v){
+  if(v==null||v==='') return null;
+  if(v instanceof Date) return new Date(Date.UTC(v.getFullYear(),v.getMonth(),lastDayOfMonth(v.getFullYear(),v.getMonth()+1)));
+  const s=String(v).trim();
+  const m=s.match(/^([A-Za-z]{3})[a-z]*[-\s](\d{4})$/);
+  if(!m) return null;
+  const mn=MONTH_NUM[m[1].slice(0,3)]; const yr=+m[2];
+  if(!mn) return null;
+  return new Date(Date.UTC(yr,mn-1,lastDayOfMonth(yr,mn)));
+}
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+
+// Parse de ruwe sheet-rijen (imp.rawRows) naar cashflow-records
+function parseArgusCashflow(raw){
+  // Vind de headerrij "For the Quarters Ending" (kolom 0 bevat die tekst)
+  let hdrIdx=-1;
+  for(let i=0;i<Math.min(raw.length,20);i++){
+    if(raw[i] && String(raw[i][0]||'').trim().toLowerCase().startsWith('for the quarters ending')){ hdrIdx=i; break; }
+  }
+  if(hdrIdx<0) throw new Error('Kon de periode-header ("For the Quarters Ending") niet vinden.');
+  const qLabelRow = raw[hdrIdx-1] || []; // rij met Quarter 1.. / Total
+  const dateRow = raw[hdrIdx];
+
+  // Bouw kolom-definities
+  const cols=[]; let fy=0;
+  for(let c=1;c<dateRow.length;c++){
+    const qlabel=String(qLabelRow[c]||'');
+    const pend=parseArgusMonthYear(dateRow[c]);
+    if(!pend) continue;
+    if(qlabel.includes('Total')){ fy++; cols.push({c,ptype:'fy',pend,fy}); }
+    else { cols.push({c,ptype:'quarter',pend,fy:fy+1}); }
+  }
+  if(!cols.length) throw new Error('Geen periode-kolommen herkend.');
+
+  // Line items vanaf de rij na de header
+  const records=[]; const pathStack={};
+  for(let r=hdrIdx+1;r<raw.length;r++){
+    const rawLabel = raw[r] ? raw[r][0] : null;
+    if(rawLabel==null || !String(rawLabel).trim()) continue;
+    const label=String(rawLabel).trim();
+    const indent=String(rawLabel).length - String(rawLabel).replace(/^\s+/,'').length;
+    pathStack[indent]=label;
+    const parents=[]; for(const k of Object.keys(pathStack).map(Number).sort((a,b)=>a-b)){ if(k<indent) parents.push(pathStack[k]); }
+    const linePath=[...parents,label].join(' > ');
+    // heeft numerieke data?
+    let hasData=false;
+    for(const col of cols){ const v=raw[r][col.c]; if(typeof v==='number'){hasData=true;break;} }
+    if(!hasData) continue;
+    for(const col of cols){
+      const v=raw[r][col.c];
+      records.push({
+        line_item:label, line_path:linePath, indent, sort_order:r,
+        period_end:fmtDate(col.pend), period_type:col.ptype, fund_year:col.fy,
+        amount: (typeof v==='number')? v : null
+      });
+    }
+  }
+  return records;
+}
+
+async function uploadArgusScenario(fundId, file){
+  const name=(document.getElementById('argus-scenario-name')?.value||'').trim();
+  if(!name) throw new Error('Geef een scenarionaam op.');
+  if(!imp.rawRows) throw new Error('Geen bestandsdata gevonden.');
+
+  const records=parseArgusCashflow(imp.rawRows);
+  if(!records.length) throw new Error('Geen cashflow-regels herkend in het bestand.');
+
+  // Check op bestaande scenario met zelfde naam
+  const existRes=await fetch(`${SB_URL}/rest/v1/scenarios?select=id,name&fund_id=eq.${fundId}&name=eq.${encodeURIComponent(name)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  const exist=await existRes.json();
+  let scenarioId;
+  if(exist.length){
+    if(!confirm(`Er bestaat al een scenario "${name}". Wil je het overschrijven? De bestaande cashflow-data wordt vervangen.`)){
+      throw new Error('Upload geannuleerd (scenario bestaat al).');
+    }
+    scenarioId=exist[0].id;
+    // Verwijder oude cashflow-regels
+    await fetch(`${SB_URL}/rest/v1/scenario_cashflows?scenario_id=eq.${scenarioId}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    await fetch(`${SB_URL}/rest/v1/scenarios?id=eq.${scenarioId}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({file_name:file.name,created_at:new Date().toISOString()})});
+  } else {
+    const ins=await fetch(`${SB_URL}/rest/v1/scenarios`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify([{fund_id:fundId,name,source:'argus',file_name:file.name}])});
+    if(!ins.ok){const e=await ins.json().catch(()=>({}));throw new Error(e.message||'Scenario aanmaken mislukt');}
+    scenarioId=(await ins.json())[0].id;
+  }
+
+  // Schrijf cashflow-regels in batches van 500
+  const payload=records.map(r=>({...r, scenario_id:scenarioId}));
+  for(let i=0;i<payload.length;i+=500){
+    await sbPost('scenario_cashflows', payload.slice(i,i+500));
+  }
+  // Logboek-entry
+  await sbPost('imports',[{fund_id:fundId,source_type:'other',scenario:name,file_name:file.name,status:'processed',rows_ingested:records.length,message:`Argus-scenario "${name}" · ${records.length} cashflow-regels`,imported_by:'dashboard'}]);
+  return records.length;
 }
 
 async function sbPost(table, payload) {
