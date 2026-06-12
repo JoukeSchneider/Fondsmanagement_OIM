@@ -340,6 +340,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Verloop effectief uurtarief</div><div class="chart-subtitle">per categorie · op basis van ingangsdatums</div></div></div><div class="chart-wrap"><canvas id="tariffChart"></canvas></div></div>
  </div>
 
+ <!-- RESERVES (onderhoud + marketing) -->
+ <div class="section-label mt12">Reserves &amp; onderhoud <span class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">&middot; saldi per 31-12-2025 (GL)</span></div>
+ <div class="grid2">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Onderhoud: lasten vs. voorziening</div><div class="chart-subtitle">jaarlijkse onderhoudslasten (Business Plan) &middot; voorziening als lijn</div></div></div><div class="chart-wrap"><canvas id="onderhoudChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Marketingreserve</div><div class="chart-subtitle">saldo &middot; marketing-forecast volgt uit GL</div></div></div><div class="chart-wrap"><canvas id="marketingChart"></canvas></div></div>
+ </div>
+ <div class="hint">Voorzieningssaldi per 31-12-2025: onderhoud € 337.459, marketing € 5.520 (GL 0702/0703). De volledige dotatie-/onttrekkingsreeks en het groot-onderhoudsplan (MJOP) volgen uit de GL; dan wordt de lijn een echt saldoverloop.</div>
+
  <!-- Tarief-wijzig dialoog -->
  <div id="tariff-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border-radius:var(--r2);padding:26px 30px;max-width:560px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto">
@@ -601,7 +609,7 @@ let assetUuidMap={};
 let tariffChart=null;
 let _tariffLoading=false;
 const SJP_ASSET_UUID='00000000-0000-0000-0000-000000000003';
-let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart,capStackChart;
+let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart,capStackChart,onderhoudChart,marketingChart;
 const gridOpt={grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B7280',font:{family:'DM Sans',size:11}}};
 const noLegend={legend:{display:false}};
 const legendBottom={legend:{position:'bottom',labels:{color:'#6B7280',font:{family:'DM Sans',size:11},boxWidth:10,boxHeight:10,usePointStyle:true}}};
@@ -624,17 +632,54 @@ function dailyFor(year,m){const mv=primaryMonthly(year)[m]??sumArr(selList().map
 function lastFilled(year){const a=primaryMonthly(year);for(let i=11;i>=0;i--)if(a[i]!=null)return i;return 11;}
 const half=a=>a?[sumArr(a.slice(0,6))||null,sumArr(a.slice(6,12))||null]:[null,null];
 const quart=a=>a?[0,1,2,3].map(k=>sumArr(a.slice(k*3,k*3+3))||null):[null,null,null,null];
+function cumPoint(prim,start,end){let has=false;for(let i=start;i<=end;i++)if(prim[i]!=null)has=true;if(!has)return null;let s=0;for(let i=0;i<=end;i++)if(prim[i]!=null)s+=prim[i];return s;}
+const cumHalf=p=>[cumPoint(p,0,5),cumPoint(p,6,11)];
+const cumQuart=p=>[cumPoint(p,0,2),cumPoint(p,3,5),cumPoint(p,6,8),cumPoint(p,9,11)];
+const cumMonths=(p,idx)=>idx.map(i=>cumPoint(p,i,i));
+const ytdLine=data=>({type:'line',label:'Cumulatief YTD',data,borderColor:GREEN,backgroundColor:'transparent',borderWidth:2,tension:.25,pointRadius:2,order:0,spanGaps:false});
+function periodYScale(){const yrs=DREMPELS?Object.keys(DREMPELS).map(Number):[];const th=DREMPELS?(DREMPELS[state.year]||DREMPELS[Math.max(...yrs)]):null;return {x:gridOpt,y:{...gridOpt,beginAtZero:true,suggestedMax:th?th.d2*1.1:undefined,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}};}
 
 function setActivePeriod(){document.querySelectorAll('#periodSeg button').forEach(b=>b.classList.toggle('active',b.dataset.p===state.period));}
 function renderCrumb(){const el=document.getElementById('assetCrumb');const p=[];p.push(`<a data-lvl="jaar">Alle jaren</a>`);if(['halfjaar','kwartaal','maand','dag'].includes(state.period)){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='halfjaar'?`<span class="cur">${state.year}</span>`:`<a data-lvl="halfjaar">${state.year}</a>`);}if(state.h!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='kwartaal'?`<span class="cur">H${state.h+1}</span>`:`<a data-lvl="kwartaal">H${state.h+1}</a>`);}if(state.q!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='maand'?`<span class="cur">Q${state.q+1}</span>`:`<a data-lvl="maand">Q${state.q+1}</a>`);}if(state.m!=null&&state.period==='dag')p.push(`<span class="sep">&rsaquo;</span><span class="cur">${MAAND[state.m]} ${state.year}</span>`);el.innerHTML=p.join(' ');el.querySelectorAll('a[data-lvl]').forEach(a=>a.onclick=()=>gotoLevel(a.dataset.lvl));}
 function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){state.h=state.q=state.m=null;}else if(lvl==='kwartaal'){state.q=state.m=null;}else if(lvl==='maand'){state.m=null;}setActivePeriod();renderAsset();}
 function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
 
+let REAL_OMZET=null, DREMPELS=null, _omzetLoaded=false, _omzetLoading=false;
+async function loadOmzetActuals(){
+  // Echte maand-actuals (Q-Park) injecteren in het omzetmodel van SJP
+  const rows=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000001&scenario=eq.actuals&grain=eq.maand&order=period_date.asc`);
+  if(rows&&rows.length){
+    const R={};
+    rows.forEach(r=>{const y=+r.period_date.slice(0,4),m=+r.period_date.slice(5,7)-1;(R[y]=R[y]||Array(12).fill(null))[m]=Math.round(Number(r.value));});
+    const sjp=byId('sjp'); if(sjp) sjp.omzet={...sjp.omzet,...R};
+    REAL_OMZET=R;
+  }
+  const th=await sbGet(`turnover_rent_thresholds?select=year,threshold_1,threshold_2&order=year.asc`);
+  if(th){DREMPELS={};th.forEach(t=>DREMPELS[t.year]={d1:Number(t.threshold_1),d2:Number(t.threshold_2)});}
+}
+const drempelPlugin={id:'drempels',afterDatasetsDraw(chart){
+  if(!DREMPELS)return;
+  const yrs=Object.keys(DREMPELS).map(Number);
+  const th=DREMPELS[state.year]||DREMPELS[Math.max(...yrs)]; if(!th)return;
+  const{ctx,chartArea:{left,right,top,bottom},scales:{y}}=chart;
+  [[th.d1,'Drempel 1',AMBER],[th.d2,'Drempel 2',RED]].forEach(([val,lbl,col])=>{
+    if(val==null)return; const yp=y.getPixelForValue(val); if(yp<top||yp>bottom)return;
+    ctx.save();ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeStyle=col;
+    ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();
+    ctx.setLineDash([]);ctx.fillStyle=col;ctx.font='600 10px "DM Sans"';ctx.textAlign='left';
+    ctx.fillText(`${lbl} ${state.year} · ${fmtK(val)}`,left+4,yp-4);ctx.restore();
+  });
+}};
+
 function renderAsset(){
   // Als de asset-data nog niet geladen is (bijv. na herladen met actieve sessie), laad alsnog
   if(state.fundId && Object.keys(tariffCache).length===0 && !_tariffLoading){
     _tariffLoading=true;
     loadAssetStatic().finally(()=>{_tariffLoading=false;});
+  }
+  if(state.fundId && !_omzetLoaded && !_omzetLoading){
+    _omzetLoading=true;
+    loadOmzetActuals().finally(()=>{_omzetLoaded=true;_omzetLoading=false;renderAsset();});
   }
   // Ververs altijd de KPI's, statische info, financials, rent roll en tarieven
   updateAssetKpis();
@@ -666,10 +711,14 @@ function renderAsset(){
     title.textContent=`Dagen — ${MAAND[m]} ${Y}`;sub.textContent='Laagste niveau · weekenden tonen hogere omzet';
     cfg={type:'bar',data:{labels:days.map((_,i)=>i+1),datasets:[{label:'Omzet/dag',data:days,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:yScale}};
   } else {
-    title.textContent=`Cumulatieve omzet YTD — ${Y}${cmpTxt}`;sub.textContent='Lopend totaal vanaf 1 januari';
+    title.textContent=`Cumulatieve omzet YTD — ${Y}${cmpTxt}`;sub.textContent='Lopend totaal vanaf 1 januari · actuals doorgetrokken met forecast (gestippeld)';
+    const act=omzetFor(Y);let last=-1;for(let i=0;i<12;i++)if(act[i]!=null)last=i;
+    const fcT=scenTargetFor(Y,'Forecast');const fc=fcT?shares.map(s=>Math.round(fcT*s)):null;
+    const blended=[];for(let i=0;i<12;i++)blended.push(act[i]!=null?act[i]:(fc?fc[i]:null));
     const cum=a=>{let s=0;return (a||[]).map(v=>v==null?null:(s+=v));};
-    const dss=[{label:primLabel(Y),data:cum(prim),...baseLine(ORANGE),spanGaps:false}];if(bench)dss.push({label:bench.label,data:cum(bench.monthly),...baseLine(bench.kind==='year'?BLUE:AMBER),borderDash:[5,4]});
-    cfg={type:'line',data:{labels:MAAND,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:yScale}};
+    const dss=[{label:'Cumulatief YTD',data:cum(blended),borderColor:ORANGE,backgroundColor:'transparent',borderWidth:2,tension:.25,pointRadius:2,spanGaps:false,segment:{borderDash:ctx=>ctx.p1DataIndex>last?[5,4]:undefined}}];
+    if(bench)dss.push({label:bench.label,data:cum(bench.monthly),...baseLine(bench.kind==='year'?BLUE:AMBER),borderDash:[5,4]});
+    cfg={type:'line',data:{labels:MAAND,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':fmtEUR(c.raw))}}},scales:periodYScale()},plugins:[drempelPlugin]};
   }
   assetChart=new Chart(ctx,cfg);
 }
@@ -695,6 +744,7 @@ function updateAssetKpis(){
   renderAssetTariffs();
   loadAssetViewKpis();
   renderAssetPnl();
+  renderReserves();
 }
 
 // ---- Parkeertarieven: tabel (ruwe waarde) + verloopgrafiek (uurtarief) ----
@@ -963,6 +1013,26 @@ async function renderAssetPnl(){
     const cls=(m.level==='total'||m.level==='subtotal')?'total':(m.level==='cost'?'sub':'');
     return `<tr class="${cls}"><td>${m.label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d))}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
   }).join('');
+}
+
+async function renderReserves(){
+  if(!state.fundId)return;
+  const scen=await getScenarioId();
+  const sal=await sbGet(`kpi_values?select=kpi_id,value,period_date&kpi_id=in.(0000aaaa-0000-0000-0000-000000000002,0000aaaa-0000-0000-0000-000000000003)&scenario=eq.actuals&order=period_date.desc`);
+  let resOnd=null,resMkt=null;
+  if(sal){const o=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000002');const m=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000003');if(o)resOnd=Number(o.value);if(m)resMkt=Number(m.value);}
+  let fyLabels=[],ondData=[];
+  if(scen){
+    const rows=await sbGet(`v_pnl_to_nri?select=fund_year,amount&scenario_id=eq.${scen}&period_type=eq.fy&label=eq.Onderhoud&order=fund_year.asc`);
+    if(rows&&rows.length){fyLabels=rows.map(r=>'FY'+r.fund_year);ondData=rows.map(r=>Math.abs(Number(r.amount)));}
+  }
+  const resLine=(val,lbl)=>({id:'resLine_'+lbl,afterDatasetsDraw(chart){if(val==null)return;const{ctx,chartArea:{left,right,top,bottom},scales:{y}}=chart;const yp=y.getPixelForValue(val);if(yp<top||yp>bottom)return;ctx.save();ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeStyle=GREEN;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=GREEN;ctx.font='600 10px "DM Sans"';ctx.textAlign='left';ctx.fillText(lbl+' · '+fmtK(val),left+4,yp-4);ctx.restore();}});
+  if(onderhoudChart)onderhoudChart.destroy();
+  const oc=document.getElementById('onderhoudChart');
+  if(oc)onderhoudChart=new Chart(oc,{type:'bar',data:{labels:fyLabels,datasets:[{label:'Onderhoudslasten',data:ondData,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,suggestedMax:resOnd?resOnd*1.1:undefined,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}},plugins:[resLine(resOnd,'Voorziening 31-12-2025')]});
+  if(marketingChart)marketingChart.destroy();
+  const mc=document.getElementById('marketingChart');
+  if(mc)marketingChart=new Chart(mc,{type:'bar',data:{labels:['Saldo 31-12-2025'],datasets:[{label:'Marketingreserve',data:[resMkt],backgroundColor:BLUE+'cc',borderRadius:3,barThickness:64}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
 }
 
 function renderFonds(){
