@@ -67,6 +67,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 .data-table tr.total td{background:var(--bg3);font-weight:500}
 .data-table tr.sub td:first-child{padding-left:22px;color:var(--text3)}
 .tr-right{text-align:right}
+.data-table th.tr-right{text-align:right}
 .conv-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;gap:12px}
 .conv-left{display:flex;align-items:center;gap:10px}
 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--text3)}
@@ -291,9 +292,17 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label" id="kpiOmzetLbl">Parkeeromzet</div><div class="kpi-val sm" id="kpiOmzet">&mdash;</div><div class="kpi-sub" id="kpiYoY"></div></div>
   <div class="kpi-card blue"><div class="kpi-label" id="kpiRunrateLbl">Run-rate jaaromzet</div><div class="kpi-val sm" id="kpiRunrate">&mdash;</div><div class="kpi-sub" id="kpiVsScen"></div></div>
-  <div class="kpi-card gray"><div class="kpi-label" id="kpiTransLbl">Transacties</div><div class="kpi-val sm" id="kpiTrans">&mdash;</div><div class="kpi-sub">gem. € 4,81 per transactie</div></div>
   <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="kpiWalt">&mdash;</div><div class="kpi-sub">resterende looptijd huur</div></div>
+  <div class="kpi-card orange"><div class="kpi-label">Verwachte omzethuur</div><div class="kpi-val sm" id="kpiOmzethuur">&mdash;</div><div class="kpi-sub">run-rate via drempelstaffel</div></div>
+  <div class="kpi-card orange"><div class="kpi-label">Verwachte totale huur</div><div class="kpi-val sm" id="kpiTothuur">&mdash;</div><div class="kpi-sub">vaste + variabele huur</div></div>
+  <div class="kpi-card blue"><div class="kpi-label">Huur/omzet-ratio</div><div class="kpi-val sm" id="kpiHuurOmzet">&mdash;</div><div class="kpi-sub">totale huur / parkeeromzet</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Direct rendement</div><div class="kpi-val sm" id="kpiDirect">&mdash;</div><div class="kpi-sub" id="kpiDirectDelta"></div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Indirect rendement</div><div class="kpi-val sm" id="kpiIndirect">&mdash;</div><div class="kpi-sub" id="kpiIndirectDelta">wacht op NAV-reeks</div></div>
  </div>
+
+ <!-- RENT ROLL PER ASSET -->
+ <div class="section-label mt12">Rent roll · deze asset</div>
+ <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
 
  <div class="section-label mt12">Omzetontwikkeling</div>
  <div class="crumb" id="assetCrumb"></div>
@@ -303,19 +312,19 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="hint">Klik op een balk om in te zoomen: jaar &rarr; halfjaar &rarr; kwartaal &rarr; maand &rarr; dag. Vergelijkingsreeks volgt de selector "Vergelijk met".</div>
  </div>
 
- <!-- FINANCIËLE VERGELIJKING -->
- <div class="section-label mt12">Financiële resultaten · <span id="finCompareLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <!-- FINANCIËLE RESULTATEN · RESULTATENREKENING TOT NRI (Argus, vergelijking) -->
+ <div class="section-label mt12">Financiële resultaten &middot; resultatenrekening tot NRI &middot; <span id="assetPnlScen" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">Business Plan IM</span>
+  <select id="assetPnlFyA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <span style="color:var(--text2);font-size:12px;margin:0 4px">vs</span>
+  <select id="assetPnlFyB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+ </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
-   <thead><tr><th>Post</th><th class="tr-right" id="finColA">Actuals</th><th class="tr-right" id="finColB">Budget</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
-   <tbody id="finBody"></tbody>
+   <thead><tr><th>Post</th><th class="tr-right" id="assetPnlColA">Fondsjaar 1</th><th class="tr-right" id="assetPnlColB">Fondsjaar 2</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <tbody id="assetPnlBody"><tr><td colspan="5" style="color:var(--text2)">Laden&hellip;</td></tr></tbody>
   </table>
-  <div class="hint">Vergelijking volgt de scenario-selector bovenaan. Δ = verschil t.o.v. vergelijkingskolom.</div>
+  <div class="hint">Conform de Argus-cashflow, per fondsjaar tot Netto huurinkomsten (NRI). Δ = kolom A − kolom B.</div>
  </div>
-
- <!-- RENT ROLL PER ASSET -->
- <div class="section-label mt12">Rent roll · deze asset</div>
- <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
 
  <!-- PARKEERTARIEVEN -->
  <div class="section-label mt12">Parkeertarieven · <span id="tariffDateLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
@@ -357,10 +366,19 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 <div class="tab-panel" data-panel="financiering">
  <div class="section-label">Hypotheek &amp; covenanten · BerlinHyp AG</div>
  <div class="kpi-grid">
-  <div class="kpi-card orange"><div class="kpi-label">Uitstaande hypotheekschuld</div><div class="kpi-val sm">€ 20.000.000</div><div class="kpi-sub">hoofdsom · aflossing volgens schema</div></div>
+  <div class="kpi-card orange"><div class="kpi-label">Uitstaande hypotheekschuld</div><div class="kpi-val sm">€ 20.000.000</div><div class="kpi-sub">resterend <span id="hypLooptijd" class="mono">&mdash;</span> · t/m 30-06-2035 · 5,05% vast</div></div>
   <div class="kpi-card blue"><div class="kpi-label">Loan-to-Value</div><div class="kpi-val sm">60,6%</div><div class="kpi-sub">schuld / taxatiewaarde €33M</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Interest Coverage (ICR)</div><div class="kpi-val sm">1,93×</div><div class="kpi-sub">NRI / rentelasten</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Gemiddelde rentevoet</div><div class="kpi-val sm">5,05%</div><div class="kpi-sub">€1,01M rente / €20M</div></div>
+ </div>
+ <div class="section-label mt12">Kapitaalstructuur (capital stack)</div>
+ <div class="grid2">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Capital stack</div><div class="chart-subtitle">financieringsbronnen fonds &middot; senior onderaan</div></div></div><div class="chart-wrap"><canvas id="capStackChart"></canvas></div></div>
+  <div class="info-card" style="overflow-x:auto">
+   <div class="info-card-title">Financieringsbronnen</div>
+   <div id="capStackTbl"></div>
+   <div class="note amber mt12">Brugfinanciering (separate vermogensklasse) is afgelost in jan 2026 en maakt geen deel meer uit van de huidige structuur.</div>
+  </div>
  </div>
  <div class="section-label mt12">Covenant-naleving</div>
  <div class="info-card">
@@ -583,7 +601,7 @@ let assetUuidMap={};
 let tariffChart=null;
 let _tariffLoading=false;
 const SJP_ASSET_UUID='00000000-0000-0000-0000-000000000003';
-let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart;
+let assetChart,navChart,huurChart,kanaalChart,uitkeringChart,liqChart,capStackChart;
 const gridOpt={grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B7280',font:{family:'DM Sans',size:11}}};
 const noLegend={legend:{display:false}};
 const legendBottom={legend:{position:'bottom',labels:{color:'#6B7280',font:{family:'DM Sans',size:11},boxWidth:10,boxHeight:10,usePointStyle:true}}};
@@ -670,14 +688,13 @@ function updateAssetKpis(){
   document.getElementById('kpiRunrateLbl').textContent=full?'Jaaromzet':'Run-rate jaaromzet';
   document.getElementById('kpiRunrate').textContent=fmtEUR(rr);
   document.getElementById('kpiVsScen').innerHTML=bench?deltaBadge(rr,bench.full,bench.label):`<span class="badge b-gray">geen vergelijking</span>`;
-  document.getElementById('kpiTransLbl').textContent=`Transacties ${full?'':'YTD '}${Y}`;
-  document.getElementById('kpiTrans').textContent=Math.round(omzet/AVG_TICKET).toLocaleString('nl-NL');
   // WALT van de geselecteerde asset
   const waltEl=document.getElementById('kpiWalt');if(waltEl)waltEl.textContent=a?a.walt.toFixed(1)+' jaar':'—';
   renderAssetStatic(a);
-  renderAssetFinancials();
   renderRentRollAsset();
   renderAssetTariffs();
+  loadAssetViewKpis();
+  renderAssetPnl();
 }
 
 // ---- Parkeertarieven: tabel (ruwe waarde) + verloopgrafiek (uurtarief) ----
@@ -889,6 +906,65 @@ function renderRentRollAsset(){
     `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;
 }
 
+async function loadAssetViewKpis(){
+  if(!state.fundId)return;
+  // Verwachte omzethuur / totale huur / ratio + run-rate uit de view
+  const tre=await sbGet(`v_turnover_rent_expectation?select=*`);
+  if(tre&&tre.length){
+    const t=tre[0];
+    setTxt('kpiRunrate',fmtEUR(Math.round(t.run_rate_omzet)));
+    setTxt('kpiRunrateLbl','Run-rate jaaromzet');
+    setTxt('kpiVsScen','laatste 12 mnd t/m '+nlMonthLabel(t.asof));
+    setTxt('kpiOmzethuur',fmtEUR(Math.round(t.verwachte_omzethuur)));
+    setTxt('kpiTothuur',fmtEUR(Math.round(t.verwachte_totale_huur)));
+    setTxt('kpiHuurOmzet',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
+  }
+  // Direct rendement (laatste kwartaal t/m vandaag) + QoQ-delta
+  const scen=await getScenarioId();
+  if(scen){
+    const pr=await sbGet(`v_property_returns?select=period_end,direct_yield,direct_yield_delta&scenario_id=eq.${scen}&period_type=eq.quarter&order=period_end.asc`);
+    if(pr&&pr.length){
+      const today=new Date().toISOString().slice(0,10);
+      const past=pr.filter(r=>r.period_end<=today);
+      const row=past.length?past[past.length-1]:pr[0];
+      setTxt('kpiDirect',(row.direct_yield*100).toFixed(2).replace('.',',')+'%');
+      const dd=document.getElementById('kpiDirectDelta');if(dd)dd.innerHTML=deltaPpt(row.direct_yield_delta);
+    }
+  }
+}
+
+let _pnlFyInit=false;
+async function renderAssetPnl(){
+  if(!state.fundId)return;
+  const scen=await getScenarioId();
+  const selA=document.getElementById('assetPnlFyA'),selB=document.getElementById('assetPnlFyB'),body=document.getElementById('assetPnlBody');
+  if(!scen||!selA||!selB||!body)return;
+  if(!_pnlFyInit){
+    const fys=await sbGet(`v_pnl_to_nri?select=fund_year&scenario_id=eq.${scen}&period_type=eq.fy&order=fund_year.asc`);
+    const uniq=[...new Set((fys||[]).map(r=>r.fund_year))];
+    if(uniq.length){
+      const opt=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');
+      selA.innerHTML=opt;selB.innerHTML=opt;
+      selA.value=uniq[0];selB.value=uniq[1]||uniq[0];
+    }
+    selA.onchange=()=>renderAssetPnl();selB.onchange=()=>renderAssetPnl();
+    _pnlFyInit=true;
+  }
+  const fyA=+selA.value||1,fyB=+selB.value||1;
+  setTxt('assetPnlColA','Fondsjaar '+fyA);setTxt('assetPnlColB','Fondsjaar '+fyB);
+  const rows=await sbGet(`v_pnl_to_nri?select=sort_order,label,level,signed_amount,fund_year&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=in.(${fyA},${fyB})&order=sort_order.asc`);
+  if(!rows||!rows.length){body.innerHTML='<tr><td colspan="5" style="color:var(--text2)">Geen data</td></tr>';return;}
+  const map={};
+  rows.forEach(r=>{const k=r.sort_order;if(!map[k])map[k]={label:r.label,level:r.level,a:null,b:null};if(r.fund_year===fyA)map[k].a=Number(r.signed_amount);if(r.fund_year===fyB)map[k].b=Number(r.signed_amount);});
+  const ordered=Object.keys(map).map(Number).sort((x,y)=>x-y);
+  body.innerHTML=ordered.map(k=>{
+    const m=map[k];const va=m.a==null?0:m.a,vb=m.b==null?0:m.b,d=va-vb,dp=vb?((va/vb-1)*100):null;
+    const dCls=d>=0?'b-green':'b-red';
+    const cls=(m.level==='total'||m.level==='subtotal')?'total':(m.level==='cost'?'sub':'');
+    return `<tr class="${cls}"><td>${m.label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d))}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
+  }).join('');
+}
+
 function renderFonds(){
   const cur=omzetOf(FUND,state.year);const filled=monthsFilled(cur),full=filled===12,omzet=sumArr(cur);
   const bench=resolveBenchFor(FUND);
@@ -951,7 +1027,40 @@ const reportKPIs={participant:['NAV per participatie','Totaal rendement (direct 
 function renderReport(t){document.getElementById('reportAudienceLbl').textContent='— '+(t==='participant'?'Participanten':'Bank (covenanten)');document.getElementById('reportContent').innerHTML=reportKPIs[t].map(k=>`<div class="info-row"><span class="info-key">${k}</span><span class="info-val txt"><span class="badge b-orange">opgenomen</span></span></div>`).join('');}
 
 function updateCtx(){const t=state.year+' · '+state.period.toUpperCase()+' · '+state.scenario;const ac=document.getElementById('assetCtx');if(ac)ac.textContent=t;document.getElementById('fondsCtx').textContent=t;updateAssetKpis();renderFonds();}
-function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderNav();renderForecast();}}
+const HYP_MATURITY=new Date('2035-06-30');
+function renderFinanciering(){
+  const now=new Date();
+  const jr=(HYP_MATURITY-now)/(1000*60*60*24*365.25);
+  const lt=document.getElementById('hypLooptijd');
+  if(lt) lt.textContent=jr.toFixed(1).replace('.',',')+' jr';
+  const equity=Math.round(9961.84*1864), debt=20000000, tot=equity+debt, taxatie=33000000;
+  const pct1=n=>(n/tot*100).toFixed(1).replace('.',',')+'%';
+  const mln=n=>(n/1e6).toFixed(1).replace('.',',');
+  const tbl=document.getElementById('capStackTbl');
+  if(tbl) tbl.innerHTML='<table class="data-table"><thead><tr><th>Laag</th><th class="tr-right">Bedrag</th><th class="tr-right">Aandeel</th></tr></thead><tbody>'+
+    `<tr><td>Eigen vermogen (NAV)</td><td class="tr-right">${fmtEUR(equity)}</td><td class="tr-right">${pct1(equity)}</td></tr>`+
+    `<tr><td>Senior debt (BerlinHyp)</td><td class="tr-right">${fmtEUR(debt)}</td><td class="tr-right">${pct1(debt)}</td></tr>`+
+    `<tr class="total"><td>Totale kapitalisatie</td><td class="tr-right">${fmtEUR(tot)}</td><td class="tr-right">100,0%</td></tr>`+
+    `<tr><td style="color:var(--red)">Taxatiewaarde vastgoed</td><td class="tr-right" style="color:var(--red)">${fmtEUR(taxatie)}</td><td class="tr-right" style="color:var(--red)">&minus;${mln(tot-taxatie)} mln</td></tr>`+
+    '</tbody></table>'+
+    `<div class="note amber mt12">De taxatiewaarde (€ ${mln(taxatie)} mln) ligt € ${mln(tot-taxatie)} mln <strong>onder</strong> de ingebrachte kapitalisatie. Dat verschil zit in aankoopkosten en reserves; afboeking is voorzien bij de herwaardering in 2028.</div>`;
+  if(capStackChart)capStackChart.destroy();
+  const cv=document.getElementById('capStackChart'); if(!cv)return;
+  const taxLine={id:'taxLine',afterDatasetsDraw(chart){
+    const{ctx,chartArea:{left,right},scales:{y}}=chart; const yp=y.getPixelForValue(taxatie);
+    ctx.save();
+    ctx.setLineDash([6,4]); ctx.lineWidth=1.5; ctx.strokeStyle=RED;
+    ctx.beginPath(); ctx.moveTo(left,yp); ctx.lineTo(right,yp); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle=RED; ctx.font='600 11px "DM Sans"'; ctx.textAlign='right';
+    ctx.fillText('Taxatie € '+(taxatie/1e6).toFixed(0)+'M',right-4,yp-5);
+    ctx.restore();
+  }};
+  capStackChart=new Chart(cv,{type:'bar',data:{labels:['Capital stack'],datasets:[
+    {label:'Senior debt (BerlinHyp)',data:[debt],backgroundColor:BLUE+'cc',borderRadius:3,stack:'s'},
+    {label:'Eigen vermogen (NAV)',data:[equity],backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)+' ('+(c.raw/tot*100).toFixed(1)+'%)'}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,suggestedMax:tot*1.05,ticks:{...gridOpt.ticks,callback:v=>'€ '+(v/1e6).toFixed(0)+'M'}}}},plugins:[taxLine]});
+}
+function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();}
 function fitScroll(){const el=document.getElementById('mainScroll');if(!el)return;if(window.innerWidth<=880){el.style.maxHeight='none';return;}const top=el.getBoundingClientRect().top;el.style.maxHeight=(window.innerHeight-top)+'px';}
 function activateTab(name){document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x.dataset.t===name));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));state.tab=name;document.getElementById('mainScroll').scrollTop=0;renderTab(name);fitScroll();}
 
@@ -1362,6 +1471,26 @@ async function uploadArgusScenario(fundId, file){
   await sbPost('imports',[{fund_id:fundId,source_type:'other',scenario:name,file_name:file.name,status:'processed',rows_ingested:records.length,message:`Argus-scenario "${name}" · ${records.length} cashflow-regels`,imported_by:'dashboard'}]);
   return records.length;
 }
+
+async function sbGet(path){
+  try{
+    const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    if(!res.ok)return null;
+    return await res.json();
+  }catch(e){console.warn('sbGet',path,e);return null;}
+}
+let _scenId=null;
+async function getScenarioId(){
+  if(_scenId)return _scenId;
+  if(!state.fundId)return null;
+  const rows=await sbGet(`scenarios?select=id,name&fund_id=eq.${state.fundId}&order=created_at.desc`);
+  if(!rows||!rows.length)return null;
+  const bp=rows.find(r=>/business plan/i.test(r.name))||rows[0];
+  _scenId=bp.id; return _scenId;
+}
+function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+function deltaPpt(d){if(d==null)return '';const v=d*100;const s=v>=0?'+':'';const cls=v>=0?'b-green':'b-red';return `<span class="badge ${cls}">${s}${v.toFixed(2).replace('.',',')} ppt vs vorig kw.</span>`;}
+function nlMonthLabel(ds){if(!ds)return '';const p=ds.split('-');return (MAAND[+p[1]-1]||'')+' '+p[0];}
 
 async function sbPost(table, payload) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
