@@ -21,6 +21,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .logo-sub{font-size:11px;color:var(--text2);margin-top:1px}
 .concept-pill{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);background:var(--orange-dim);padding:3px 9px;border-radius:20px;margin-left:8px}
 .controls{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.omzet-controls{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
 .ctrl{display:flex;flex-direction:column;gap:5px}
 .ctrl-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
 .seg{display:flex;gap:2px;background:var(--bg3);border-radius:var(--r);padding:3px;border:1px solid var(--border)}
@@ -169,12 +170,15 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="logo"><div class="logo-mark">OIM</div><div><div class="logo-text">Fondsmanager-dashboard<span class="concept-pill">Concept</span></div><div class="logo-sub">Orange IM · multi-fonds · multi-asset-class</div></div></div>
  <div class="controls">
   <div class="ctrl"><span class="ctrl-label">Actief fonds</span><div class="fund-active-label muted" id="fundActiveLabel">— geen fonds geselecteerd</div></div>
+ </div>
+</header>
+
+<div class="controls omzet-controls" id="omzetControls" style="display:none">
   <div class="ctrl"><span class="ctrl-label">Jaar</span><select class="ctrl-select" id="yearSel"></select></div>
   <div class="ctrl"><span class="ctrl-label">Periode</span><div class="seg" id="periodSeg"><button data-p="dag">Dag</button><button data-p="maand" class="active">Maand</button><button data-p="kwartaal">Kwartaal</button><button data-p="halfjaar">Halfjaar</button><button data-p="jaar">Jaar</button><button data-p="ytd">YTD</button></div></div>
   <div class="ctrl"><span class="ctrl-label">Scenario</span><div class="seg" id="scenSeg"><button data-s="Actuals" class="active">Actuals</button><button data-s="Budget">Budget</button><button data-s="Forecast">Forecast</button><button data-s="IM-prognose">IM</button></div></div>
   <div class="ctrl"><span class="ctrl-label">Vergelijk met</span><select class="ctrl-select" id="cmpSel"></select></div>
- </div>
-</header>
+</div>
 
 <div class="tab-nav" id="tabNav">
  <button class="tab-btn active" data-t="fondsen">Fondsen</button>
@@ -209,6 +213,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 <!-- FONDS -->
 <div class="tab-panel" data-panel="fonds">
  <div class="section-label">Orange IM Parkeerfonds I · <span id="fondsCtx" class="mono"></span></div>
+ <div id="ctrlSlot-fonds"></div>
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label">NAV per participatie</div><div class="kpi-val">€ 9.961,84</div><div class="kpi-sub"><span class="badge b-amber">&minus;0,4%</span> t.o.v. inleg €10.000 · 31-12-2025</div></div>
   <div class="kpi-card green"><div class="kpi-label">Totaal rendement YTD</div><div class="kpi-val">+3,2%</div><div class="kpi-sub">direct 2,4% · indirect 0,8%</div></div>
@@ -252,28 +257,41 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="kpi-card blue"><div class="kpi-label">BAR / NAR</div><div class="kpi-val sm" id="pfBarNar">&mdash;</div><div class="kpi-sub">bruto / netto aanvangsrendement</div></div>
   <div class="kpi-card green"><div class="kpi-label">Bezettingsgraad</div><div class="kpi-val" id="pfBezet">&mdash;</div><div class="kpi-sub">gewogen naar plaatsen</div></div>
   <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="pfWalt">&mdash;</div><div class="kpi-sub">gewogen naar waarde</div></div>
+  <div class="kpi-card orange"><div class="kpi-label">Totale netto huur</div><div class="kpi-val sm" id="pfNettoHuur">&mdash;</div><div class="kpi-sub">NRI · lopend fondsjaar</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Direct rendement</div><div class="kpi-val sm" id="pfDirect">&mdash;</div><div class="kpi-sub" id="pfDirectDelta"></div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Indirect rendement</div><div class="kpi-val sm" id="pfIndirect">&mdash;</div><div class="kpi-sub" id="pfIndirectDelta">wacht op NAV-reeks</div></div>
  </div>
+ <div class="section-label mt12">Rent roll · alle geselecteerde assets</div>
+ <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Asset</th><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th><th class="tr-right">Huur/omzet</th></tr></thead><tbody id="rrBody"></tbody></table></div>
+
  <div class="section-label mt12">Huurinkomsten</div>
  <div class="grid2">
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
  </div>
- <div class="section-label mt12">Geconsolideerde financiële resultaten · <span id="pfFinCompareLbl" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI &middot; <span class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">Business Plan IM</span>
+  <select id="pfPnlFyA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <span style="color:var(--text2);font-size:12px;margin:0 4px">vs</span>
+  <select id="pfPnlFyB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+ </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
-   <thead><tr><th>Post</th><th class="tr-right" id="pfFinColA">Actuals</th><th class="tr-right" id="pfFinColB">Budget</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
-   <tbody id="pfFinBody"></tbody>
+   <thead><tr><th>Post</th><th class="tr-right" id="pfPnlColA">Fondsjaar 1</th><th class="tr-right" id="pfPnlColB">Fondsjaar 2</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <tbody id="pfPnlBody"><tr><td colspan="5" style="color:var(--text2)">Laden&hellip;</td></tr></tbody>
   </table>
-  <div class="hint">Geconsolideerd over de geselecteerde assets · volgt de scenario-selector bovenaan.</div>
+  <div class="hint">Conform de Argus-cashflow, per fondsjaar tot NRI. Δ = kolom A − kolom B.</div>
  </div>
- <div class="section-label mt12">Rent roll · alle geselecteerde assets</div>
- <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Asset</th><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrBody"></tbody></table></div>
+ <div class="section-label mt12">Reserves &amp; onderhoud (geconsolideerd) <span class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">&middot; over geselecteerde assets</span></div>
+ <div class="grid2">
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Onderhoud: lasten vs. voorziening</div><div class="chart-subtitle">jaarlijkse onderhoudslasten (Business Plan) &middot; voorziening als lijn</div></div></div><div class="chart-wrap"><canvas id="pfOnderhoudChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Marketingreserve</div><div class="chart-subtitle">saldo &middot; marketing-forecast volgt uit GL</div></div></div><div class="chart-wrap"><canvas id="pfMarketingChart"></canvas></div></div>
+ </div>
+ <div class="hint">Geconsolideerde voorzieningssaldi per 31-12-2025 (GL 0702/0703). Dotatie-/onttrekkingsreeks en MJOP volgen uit de GL.</div>
 </div>
 
 <!-- ASSET -->
 <div class="tab-panel" data-panel="asset">
  <div class="asset-top">
-  <div class="section-label"><span id="assetTitle">Asset</span> · <span id="assetCtx" class="mono"></span></div>
   <div class="chips" id="assetChips" style="margin-bottom:0"></div>
  </div>
 
@@ -302,12 +320,13 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 
  <!-- RENT ROLL PER ASSET -->
  <div class="section-label mt12">Rent roll · deze asset</div>
- <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
+ <div class="info-card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Huurder</th><th class="tr-right">Plaatsen</th><th class="tr-right">Vaste huur p.j.</th><th class="tr-right">Omzethuur</th><th>Index</th><th>Einddatum</th><th class="tr-right">WALT</th><th class="tr-right">Huur/omzet</th></tr></thead><tbody id="rrAssetBody"></tbody></table></div>
 
  <div class="section-label mt12">Omzetontwikkeling</div>
+ <div id="ctrlSlot-asset"></div>
  <div class="crumb" id="assetCrumb"></div>
  <div class="chart-card">
-  <div class="chart-header"><div><div class="chart-title" id="assetChartTitle"></div><div class="chart-subtitle" id="assetChartSub"></div></div></div>
+  <div class="chart-header"><div><div class="chart-title" id="assetChartTitle"></div><div class="chart-subtitle" id="assetChartSub"></div></div><div id="ytdYearPick" style="display:none;gap:6px;flex-wrap:wrap;align-items:center"></div></div>
   <div class="chart-wrap"><canvas id="assetChart"></canvas></div>
   <div class="hint">Klik op een balk om in te zoomen: jaar &rarr; halfjaar &rarr; kwartaal &rarr; maand &rarr; dag. Vergelijkingsreeks volgt de selector "Vergelijk met".</div>
  </div>
@@ -671,6 +690,17 @@ const drempelPlugin={id:'drempels',afterDatasetsDraw(chart){
   });
 }};
 
+let _ytdYears=new Set();
+function renderYtdYearPick(){
+  const pick=document.getElementById('ytdYearPick');if(!pick)return;
+  if(state.period!=='ytd'){pick.style.display='none';return;}
+  pick.style.display='flex';
+  const a=selList()[0];if(!a||!a.omzet){pick.innerHTML='';return;}
+  const years=Object.keys(a.omzet).map(Number).filter(y=>y!==state.year&&(a.omzet[y]||[]).some(v=>v!=null)).sort((x,y)=>x-y);
+  pick.innerHTML='<span style="font-size:11px;color:var(--text2);font-weight:600">Vergelijk jaren:</span>'+years.map(y=>`<button class="chip${_ytdYears.has(y)?' active':''}" data-yy="${y}" style="padding:3px 10px;font-size:11px">${y}</button>`).join('');
+  pick.querySelectorAll('button[data-yy]').forEach(b=>b.onclick=()=>{const yy=+b.dataset.yy;_ytdYears.has(yy)?_ytdYears.delete(yy):_ytdYears.add(yy);renderAsset();});
+}
+
 function renderAsset(){
   // Als de asset-data nog niet geladen is (bijv. na herladen met actieve sessie), laad alsnog
   if(state.fundId && Object.keys(tariffCache).length===0 && !_tariffLoading){
@@ -681,6 +711,7 @@ function renderAsset(){
     _omzetLoading=true;
     loadOmzetActuals().finally(()=>{_omzetLoaded=true;_omzetLoading=false;renderAsset();});
   }
+  renderYtdYearPick();
   // Ververs altijd de KPI's, statische info, financials, rent roll en tarieven
   updateAssetKpis();
   const ctx=document.getElementById('assetChart');if(!ctx)return;if(assetChart)assetChart.destroy();
@@ -694,17 +725,17 @@ function renderAsset(){
     const labels=YEARS.map(y=>monthsFilled(omzetFor(y))<12?y+'*':''+y);
     cfg={type:'bar',data:{labels,datasets:[{label:'Parkeeromzet',data,backgroundColor:YEARS.map(y=>y===Y?ORANGE+'cc':BLUE+'88'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,onClick:(e,el)=>{if(el.length){state.year=YEARS[el[0].index];document.getElementById('yearSel').value=state.year;state.period='halfjaar';state.h=state.q=state.m=null;updateCtx();renderAsset();}},plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)+(c.label.includes('*')?' (run-rate)':'')}}},scales:yScale}};
   } else if(state.period==='halfjaar'){
-    title.textContent=`Halfjaren — ${Y}${cmpTxt}`;sub.textContent='Klik op een halfjaar om de kwartalen te zien';
-    const ds=[{type:'bar',label:primLabel(Y),data:half(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,half(bench.monthly)));
+    title.textContent=`Halfjaren — ${Y}`;sub.textContent='Klik op een halfjaar om de kwartalen te zien';
+    const ds=[{type:'bar',label:primLabel(Y),data:half(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
     cfg=wrapCfg(['H1','H2'],ds,yScale,i=>{state.h=i;state.period='kwartaal';state.q=state.m=null;renderAsset();});
   } else if(state.period==='kwartaal'){
-    title.textContent=`Kwartalen — ${Y}${cmpTxt}`;sub.textContent='Klik op een kwartaal om de maanden te zien';
-    const ds=[{type:'bar',label:primLabel(Y),data:quart(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,quart(bench.monthly)));
+    title.textContent=`Kwartalen — ${Y}`;sub.textContent='Klik op een kwartaal om de maanden te zien';
+    const ds=[{type:'bar',label:primLabel(Y),data:quart(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
     cfg=wrapCfg(['Q1','Q2','Q3','Q4'],ds,yScale,i=>{state.q=i;state.period='maand';state.m=null;renderAsset();});
   } else if(state.period==='maand'){
     const inQ=state.q!=null;const idx=inQ?[state.q*3,state.q*3+1,state.q*3+2]:MAAND.map((_,i)=>i);
-    title.textContent=inQ?`Maanden Q${state.q+1} — ${Y}${cmpTxt}`:`Maanden — ${Y}${cmpTxt}`;sub.textContent='Klik op een maand om door te klikken naar dagniveau';
-    const ds=[{type:'bar',label:primLabel(Y),data:idx.map(i=>prim[i]),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];if(bench)ds.push(benchDataset(bench,idx.map(i=>bench.monthly[i])));
+    title.textContent=inQ?`Maanden Q${state.q+1} — ${Y}`:`Maanden — ${Y}`;sub.textContent='Klik op een maand om door te klikken naar dagniveau';
+    const ds=[{type:'bar',label:primLabel(Y),data:idx.map(i=>prim[i]),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
     cfg=wrapCfg(idx.map(i=>MAAND[i]),ds,yScale,k=>{state.m=idx[k];state.period='dag';renderAsset();});
   } else if(state.period==='dag'){
     const m=state.m!=null?state.m:lastFilled(Y);const days=dailyFor(Y,m);
@@ -718,6 +749,8 @@ function renderAsset(){
     const cum=a=>{let s=0;return (a||[]).map(v=>v==null?null:(s+=v));};
     const dss=[{label:'Cumulatief YTD',data:cum(blended),borderColor:ORANGE,backgroundColor:'transparent',borderWidth:2,tension:.25,pointRadius:2,spanGaps:false,segment:{borderDash:ctx=>ctx.p1DataIndex>last?[5,4]:undefined}}];
     if(bench)dss.push({label:bench.label,data:cum(bench.monthly),...baseLine(bench.kind==='year'?BLUE:AMBER),borderDash:[5,4]});
+    const _pal=[BLUE,AMBER,GREEN,'#7C3AED','#0891B2','#DB2777'];let _pi=0;
+    [..._ytdYears].sort((x,y)=>x-y).forEach(yy=>{dss.push({label:String(yy),data:cum(omzetFor(yy)),borderColor:_pal[_pi++%_pal.length],backgroundColor:'transparent',borderWidth:1.5,tension:.25,pointRadius:0,borderDash:[2,2],spanGaps:true});});
     cfg={type:'line',data:{labels:MAAND,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':fmtEUR(c.raw))}}},scales:periodYScale()},plugins:[drempelPlugin]};
   }
   assetChart=new Chart(ctx,cfg);
@@ -729,7 +762,7 @@ function updateAssetKpis(){
   const Y=state.year,cur=primaryMonthly(Y),bench=resolveBench();
   const filled=monthsFilled(cur),full=filled===12,omzet=sumArr(cur);const sel=selList(),n=sel.length;
   const a=sel[0];
-  document.getElementById('assetTitle').textContent=a?`${a.name}${a.concept?' (concept)':''} · ${a.city}`:'Asset';
+  {const at=document.getElementById('assetTitle');if(at)at.textContent=a?`${a.name}${a.concept?' (concept)':''} · ${a.city}`:'Asset';}
   document.getElementById('kpiOmzetLbl').textContent=`Parkeeromzet ${full?'':'YTD '}${Y}`;
   document.getElementById('kpiOmzet').textContent=fmtEUR(omzet);
   document.getElementById('kpiYoY').innerHTML=bench?deltaBadge(omzet,sumArr(bench.monthly.slice(0,filled)),bench.label+(full?'':' (z.p.)')):`<span class="badge b-gray">geen vergelijking</span>`;
@@ -743,7 +776,7 @@ function updateAssetKpis(){
   renderRentRollAsset();
   renderAssetTariffs();
   loadAssetViewKpis();
-  renderAssetPnl();
+  renderPnlTable('asset');
   renderReserves();
 }
 
@@ -953,7 +986,7 @@ function renderAssetFinancials(){
 function renderRentRollAsset(){
   const sel=selList();const a=sel[0];if(!a)return;
   document.getElementById('rrAssetBody').innerHTML=
-    `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;
+    `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrAssetRatio">&mdash;</td></tr>`;
 }
 
 async function loadAssetViewKpis(){
@@ -968,6 +1001,7 @@ async function loadAssetViewKpis(){
     setTxt('kpiOmzethuur',fmtEUR(Math.round(t.verwachte_omzethuur)));
     setTxt('kpiTothuur',fmtEUR(Math.round(t.verwachte_totale_huur)));
     setTxt('kpiHuurOmzet',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
+    setTxt('rrAssetRatio',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
   }
   // Direct rendement (laatste kwartaal t/m vandaag) + QoQ-delta
   const scen=await getScenarioId();
@@ -983,25 +1017,21 @@ async function loadAssetViewKpis(){
   }
 }
 
-let _pnlFyInit=false;
-async function renderAssetPnl(){
+const _pnlInit={};
+async function renderPnlTable(prefix){
   if(!state.fundId)return;
   const scen=await getScenarioId();
-  const selA=document.getElementById('assetPnlFyA'),selB=document.getElementById('assetPnlFyB'),body=document.getElementById('assetPnlBody');
+  const selA=document.getElementById(prefix+'PnlFyA'),selB=document.getElementById(prefix+'PnlFyB'),body=document.getElementById(prefix+'PnlBody');
   if(!scen||!selA||!selB||!body)return;
-  if(!_pnlFyInit){
+  if(!_pnlInit[prefix]){
     const fys=await sbGet(`v_pnl_to_nri?select=fund_year&scenario_id=eq.${scen}&period_type=eq.fy&order=fund_year.asc`);
     const uniq=[...new Set((fys||[]).map(r=>r.fund_year))];
-    if(uniq.length){
-      const opt=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');
-      selA.innerHTML=opt;selB.innerHTML=opt;
-      selA.value=uniq[0];selB.value=uniq[1]||uniq[0];
-    }
-    selA.onchange=()=>renderAssetPnl();selB.onchange=()=>renderAssetPnl();
-    _pnlFyInit=true;
+    if(uniq.length){const opt=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');selA.innerHTML=opt;selB.innerHTML=opt;selA.value=uniq[0];selB.value=uniq[1]||uniq[0];}
+    selA.onchange=()=>renderPnlTable(prefix);selB.onchange=()=>renderPnlTable(prefix);
+    _pnlInit[prefix]=true;
   }
   const fyA=+selA.value||1,fyB=+selB.value||1;
-  setTxt('assetPnlColA','Fondsjaar '+fyA);setTxt('assetPnlColB','Fondsjaar '+fyB);
+  setTxt(prefix+'PnlColA','Fondsjaar '+fyA);setTxt(prefix+'PnlColB','Fondsjaar '+fyB);
   const rows=await sbGet(`v_pnl_to_nri?select=sort_order,label,level,signed_amount,fund_year&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=in.(${fyA},${fyB})&order=sort_order.asc`);
   if(!rows||!rows.length){body.innerHTML='<tr><td colspan="5" style="color:var(--text2)">Geen data</td></tr>';return;}
   const map={};
@@ -1015,7 +1045,9 @@ async function renderAssetPnl(){
   }).join('');
 }
 
-async function renderReserves(){
+const _reserveCharts={};
+async function renderReserves(oId,mId){
+  oId=oId||'onderhoudChart';mId=mId||'marketingChart';
   if(!state.fundId)return;
   const scen=await getScenarioId();
   const sal=await sbGet(`kpi_values?select=kpi_id,value,period_date&kpi_id=in.(0000aaaa-0000-0000-0000-000000000002,0000aaaa-0000-0000-0000-000000000003)&scenario=eq.actuals&order=period_date.desc`);
@@ -1027,12 +1059,32 @@ async function renderReserves(){
     if(rows&&rows.length){fyLabels=rows.map(r=>'FY'+r.fund_year);ondData=rows.map(r=>Math.abs(Number(r.amount)));}
   }
   const resLine=(val,lbl)=>({id:'resLine_'+lbl,afterDatasetsDraw(chart){if(val==null)return;const{ctx,chartArea:{left,right,top,bottom},scales:{y}}=chart;const yp=y.getPixelForValue(val);if(yp<top||yp>bottom)return;ctx.save();ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeStyle=GREEN;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=GREEN;ctx.font='600 10px "DM Sans"';ctx.textAlign='left';ctx.fillText(lbl+' · '+fmtK(val),left+4,yp-4);ctx.restore();}});
-  if(onderhoudChart)onderhoudChart.destroy();
-  const oc=document.getElementById('onderhoudChart');
-  if(oc)onderhoudChart=new Chart(oc,{type:'bar',data:{labels:fyLabels,datasets:[{label:'Onderhoudslasten',data:ondData,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,suggestedMax:resOnd?resOnd*1.1:undefined,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}},plugins:[resLine(resOnd,'Voorziening 31-12-2025')]});
-  if(marketingChart)marketingChart.destroy();
-  const mc=document.getElementById('marketingChart');
-  if(mc)marketingChart=new Chart(mc,{type:'bar',data:{labels:['Saldo 31-12-2025'],datasets:[{label:'Marketingreserve',data:[resMkt],backgroundColor:BLUE+'cc',borderRadius:3,barThickness:64}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
+  if(_reserveCharts[oId])_reserveCharts[oId].destroy();
+  const oc=document.getElementById(oId);
+  if(oc)_reserveCharts[oId]=new Chart(oc,{type:'bar',data:{labels:fyLabels,datasets:[{label:'Onderhoudslasten',data:ondData,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,suggestedMax:resOnd?resOnd*1.1:undefined,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}},plugins:[resLine(resOnd,'Voorziening 31-12-2025')]});
+  if(_reserveCharts[mId])_reserveCharts[mId].destroy();
+  const mc=document.getElementById(mId);
+  if(mc)_reserveCharts[mId]=new Chart(mc,{type:'bar',data:{labels:['Saldo 31-12-2025'],datasets:[{label:'Marketingreserve',data:[resMkt],backgroundColor:BLUE+'cc',borderRadius:3,barThickness:64}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
+}
+
+async function loadPortViewKpis(){
+  if(!state.fundId)return;
+  const scen=await getScenarioId();
+  const tre=await sbGet(`v_turnover_rent_expectation?select=huur_omzet_ratio`);
+  if(tre&&tre.length){setTxt('rrRatio_sjp',(tre[0].huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');}
+  if(!scen)return;
+  const pr=await sbGet(`v_property_returns?select=period_end,nri,direct_yield,direct_yield_delta,period_type,fund_year&scenario_id=eq.${scen}&order=period_end.asc`);
+  if(pr&&pr.length){
+    const fy=pr.filter(r=>r.period_type==='fy');const fy1=fy.find(r=>r.fund_year===1)||fy[0];
+    if(fy1)setTxt('pfNettoHuur',fmtEUR(Math.round(Number(fy1.nri))));
+    const q=pr.filter(r=>r.period_type==='quarter');const today=new Date().toISOString().slice(0,10);const past=q.filter(r=>r.period_end<=today);const row=past.length?past[past.length-1]:q[0];
+    if(row){setTxt('pfDirect',(row.direct_yield*100).toFixed(2).replace('.',',')+'%');const dd=document.getElementById('pfDirectDelta');if(dd)dd.innerHTML=deltaPpt(row.direct_yield_delta);}
+  }
+  const sam=await sbGet(`v_pnl_to_nri?select=label,level,signed_amount,amount&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=eq.1&order=sort_order.asc`);
+  const tb=document.getElementById('pfTbody');
+  if(tb&&sam&&sam.length){
+    tb.innerHTML=sam.map(r=>{const cls=(r.level==='total'||r.level==='subtotal')?'total':(r.level==='cost'?'sub':'');const neg=Number(r.signed_amount)<0;return `<tr class="${cls}"><td>${r.label}</td><td class="tr-right">${(neg?'− ':'')+fmtEUR(Math.abs(Number(r.amount)))}</td></tr>`;}).join('');
+  }
 }
 
 function renderFonds(){
@@ -1071,10 +1123,10 @@ function renderForecast(){
 
 function assetPnl(a){const gri=a.fixed+a.turn,r=gri/SJP_GRI;const opex={};let opexTot=0;for(const k in SJP_OPEX){opex[k]=Math.round(SJP_OPEX[k]*r);opexTot+=opex[k];}const nri=gri-opexTot,nonopex=Math.round(SJP_NONOPEX*r),interest=Math.round(a.fv*RATE_ON_VALUE);return {fixed:a.fixed,turn:a.turn,gri,opex,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};}
 function renderPnl(){const sel=selList();const C={fixed:0,turn:0,gri:0,opex:{},opexTot:0,nri:0,nonopex:0,interest:0,net:0};for(const k in SJP_OPEX)C.opex[k]=0;sel.forEach(a=>{const p=assetPnl(a);C.fixed+=p.fixed;C.turn+=p.turn;C.gri+=p.gri;C.opexTot+=p.opexTot;C.nri+=p.nri;C.nonopex+=p.nonopex;C.interest+=p.interest;C.net+=p.net;for(const k in p.opex)C.opex[k]+=p.opex[k];});document.getElementById('pnlYr').textContent=`· ${sel.length} asset(s) · ${state.year} (prognose)`;let r='';r+=`<tr><td>Vaste huur (fixed rental income)</td><td class="tr-right">${fmtEUR(C.fixed)}</td></tr>`;r+=`<tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(C.turn)}</td></tr>`;r+=`<tr class="total"><td>Bruto huurinkomsten (GRI)</td><td class="tr-right">${fmtEUR(C.gri)}</td></tr>`;for(const k in C.opex)r+=`<tr class="sub"><td>${k}</td><td class="tr-right">− ${fmtEUR(C.opex[k])}</td></tr>`;r+=`<tr><td>Totale exploitatielasten</td><td class="tr-right">− ${fmtEUR(C.opexTot)}</td></tr>`;r+=`<tr class="total"><td>Netto huurinkomsten (NRI)</td><td class="tr-right">${fmtEUR(C.nri)}</td></tr>`;r+=`<tr><td>Niet-operationele lasten</td><td class="tr-right">− ${fmtEUR(C.nonopex)}</td></tr>`;r+=`<tr><td>Rentelasten</td><td class="tr-right">− ${fmtEUR(C.interest)}</td></tr>`;r+=`<tr class="total"><td>Netto resultaat</td><td class="tr-right">${fmtEUR(C.net)}</td></tr>`;document.getElementById('pnlBody').innerHTML=r;}
-function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td>Q-Park</td><td class="tr-right">${tS}</td><td class="tr-right">${fmtEUR(tF)}</td><td class="tr-right">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
+function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrRatio_${a.id}">&mdash;</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td></td><td class="tr-right">${tS}</td><td class="tr-right">${fmtEUR(tF)}</td><td class="tr-right">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td><td class="tr-right">&mdash;</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
 
 function portAgg(){const sel=selList();const fv=sel.reduce((s,a)=>s+a.fv,0),fixed=sel.reduce((s,a)=>s+a.fixed,0),turn=sel.reduce((s,a)=>s+a.turn,0),spaces=sel.reduce((s,a)=>s+a.spaces,0),gross=fixed+turn,nri=gross*NRI_FACTOR;const occ=spaces?sel.reduce((s,a)=>s+a.occ*a.spaces,0)/spaces:0;const walt=fv?sel.reduce((s,a)=>s+a.walt*a.fv,0)/fv:0;return {sel,fv,fixed,turn,gross,nri,spaces,occ,walt,bar:gross/fv,nar:nri/fv};}
-function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML=`<tr><td>Vaste huur</td><td class="tr-right">${fmtEUR(a.fixed)}</td></tr><tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(a.turn)}</td></tr><tr class="total"><td>Bruto huur (GRI)</td><td class="tr-right">${fmtEUR(a.gross)}</td></tr><tr><td>Exploitatielasten</td><td class="tr-right">− ${fmtEUR(a.gross-a.nri)}</td></tr><tr class="total"><td>Netto huur (NRI)</td><td class="tr-right">${fmtEUR(a.nri)}</td></tr>`;document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderFinancialsTable(selList(),{colA:'pfFinColA',colB:'pfFinColB',lbl:'pfFinCompareLbl',body:'pfFinBody'});if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
+function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML='<tr><td colspan="2" style="color:var(--text2)">Laden&hellip;</td></tr>';document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderPnlTable('pf');loadPortViewKpis();renderReserves('pfOnderhoudChart','pfMarketingChart');if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
 
 function renderChips(){
   // PORTFOLIO: multi-select (assets aan/uit voor consolidatie)
@@ -1132,7 +1184,8 @@ function renderFinanciering(){
 }
 function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();}
 function fitScroll(){const el=document.getElementById('mainScroll');if(!el)return;if(window.innerWidth<=880){el.style.maxHeight='none';return;}const top=el.getBoundingClientRect().top;el.style.maxHeight=(window.innerHeight-top)+'px';}
-function activateTab(name){document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x.dataset.t===name));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));state.tab=name;document.getElementById('mainScroll').scrollTop=0;renderTab(name);fitScroll();}
+function placeOmzetControls(name){const bar=document.getElementById('omzetControls');if(!bar)return;const slot=document.getElementById('ctrlSlot-'+name);if(slot){slot.appendChild(bar);bar.style.display='flex';}else{bar.style.display='none';}}
+function activateTab(name){document.querySelectorAll('.tab-btn').forEach(x=>x.classList.toggle('active',x.dataset.t===name));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));state.tab=name;placeOmzetControls(name);document.getElementById('mainScroll').scrollTop=0;renderTab(name);fitScroll();}
 
 document.getElementById('tabNav').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(!b||b.classList.contains('locked'))return;activateTab(b.dataset.t);});
 document.getElementById('periodSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;gotoLevel(b.dataset.p);});
@@ -1241,6 +1294,7 @@ const cmpSel=document.getElementById('cmpSel');
 [['prev','Voorgaand jaar'],['y2025','2025'],['y2024','2024'],['y2023','2023'],['IM-prognose','IM-prognose'],['Budget','Budget'],['Forecast','Forecast'],['none','Geen']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;cmpSel.appendChild(o);});
 cmpSel.value=state.compare;
 cmpSel.addEventListener('change',e=>{state.compare=e.target.value;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
+placeOmzetControls(state.tab);
 
 function initApp(){renderChips();updateCtx();renderReport('participant');fitScroll();}
 
