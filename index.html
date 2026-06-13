@@ -641,9 +641,9 @@ const omzetFor=y=>omzetOf(selList(),y);
 const scenTargetFor=(y,n)=>scenTargetOf(selList(),y,n);
 function monthsFilled(a){return a.filter(v=>v!=null).length;}
 function sumArr(a){return a.reduce((x,y)=>x+(y||0),0);}
-function primaryMonthly(year){if(state.scenario==='Actuals')return omzetFor(year);const t=scenTargetFor(year,state.scenario);if(!t)return omzetFor(year);return shares.map(s=>Math.round(t*s));}
+function primaryMonthly(year){if(state.scenario==='Actuals')return omzetFor(year);if(state.scenario==='Forecast'&&FC_OMZET&&FC_OMZET[year])return FC_OMZET[year];if(state.scenario==='IM-prognose'&&IM_OMZET&&IM_OMZET[year])return IM_OMZET[year];const t=scenTargetFor(year,state.scenario);if(!t)return omzetFor(year);return shares.map(s=>Math.round(t*s));}
 function primLabel(Y){if(state.scenario!=='Actuals'&&scenTargetFor(Y,state.scenario))return `${Y} (${state.scenario})`;return `${Y}${monthsFilled(omzetFor(Y))<12?' (Actuals)':''}`;}
-function resolveBenchFor(list){const Y=state.year;let c=state.compare;if(c==='prev')c='y'+(Y-1);if(c==='none')return null;if(c[0]==='y'){const yr=+c.slice(1);if(yr===Y||!YEARS.includes(yr))return null;const m=omzetOf(list,yr);return {kind:'year',label:''+yr,monthly:m,full:sumArr(m)};}const t=scenTargetOf(list,Y,c);if(!t)return null;return {kind:'scen',label:c,monthly:shares.map(s=>Math.round(t*s)),full:t};}
+function resolveBenchFor(list){const Y=state.year;let c=state.compare;if(c==='prev')c='y'+(Y-1);if(c==='none')return null;if(c[0]==='y'){const yr=+c.slice(1);if(yr===Y||!YEARS.includes(yr))return null;const m=omzetOf(list,yr);return {kind:'year',label:''+yr,monthly:m,full:sumArr(m)};}if(c==='Forecast'&&FC_OMZET&&FC_OMZET[Y])return {kind:'scen',label:c,monthly:FC_OMZET[Y],full:sumArr(FC_OMZET[Y])};if(c==='IM-prognose'&&IM_OMZET&&IM_OMZET[Y])return {kind:'scen',label:c,monthly:IM_OMZET[Y],full:sumArr(IM_OMZET[Y])};const t=scenTargetOf(list,Y,c);if(!t)return null;return {kind:'scen',label:c,monthly:shares.map(s=>Math.round(t*s)),full:t};}
 const resolveBench=()=>resolveBenchFor(selList());
 
 function dayWeights(year,m){const d=new Date(year,m+1,0).getDate();const w=[];let t=0;for(let i=0;i<d;i++){const dow=new Date(year,m,i+1).getDay();const f=dow===0?0.6:dow===6?1.25:1.0;w.push(f);t+=f;}return {w,t,d};}
@@ -663,7 +663,7 @@ function renderCrumb(){const el=document.getElementById('assetCrumb');const p=[]
 function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){state.h=state.q=state.m=null;}else if(lvl==='kwartaal'){state.q=state.m=null;}else if(lvl==='maand'){state.m=null;}setActivePeriod();renderAsset();}
 function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
 
-let REAL_OMZET=null, DREMPELS=null, _omzetLoaded=false, _omzetLoading=false;
+let REAL_OMZET=null, FC_OMZET=null, IM_OMZET=null, DREMPELS=null, _omzetLoaded=false, _omzetLoading=false;
 async function loadOmzetActuals(){
   // Echte maand-actuals (Q-Park) injecteren in het omzetmodel van SJP
   const rows=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000001&scenario=eq.actuals&grain=eq.maand&order=period_date.asc`);
@@ -673,6 +673,11 @@ async function loadOmzetActuals(){
     const sjp=byId('sjp'); if(sjp) sjp.omzet={...sjp.omzet,...R};
     REAL_OMZET=R;
   }
+  // Echte forecast-omzet (IM-prognose realistisch, maandelijks uitgesmeerd)
+  const fcRows=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000001&scenario=eq.forecast&grain=eq.maand&order=period_date.asc`);
+  if(fcRows&&fcRows.length){const F={};fcRows.forEach(r=>{const y=+r.period_date.slice(0,4),m=+r.period_date.slice(5,7)-1;(F[y]=F[y]||Array(12).fill(null))[m]=Math.round(Number(r.value));});FC_OMZET=F;}
+  const imRows=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000001&scenario=eq.im_prognose&grain=eq.maand&order=period_date.asc`);
+  if(imRows&&imRows.length){const I={};imRows.forEach(r=>{const y=+r.period_date.slice(0,4),m=+r.period_date.slice(5,7)-1;(I[y]=I[y]||Array(12).fill(null))[m]=Math.round(Number(r.value));});IM_OMZET=I;}
   const th=await sbGet(`turnover_rent_thresholds?select=year,threshold_1,threshold_2&order=year.asc`);
   if(th){DREMPELS={};th.forEach(t=>DREMPELS[t.year]={d1:Number(t.threshold_1),d2:Number(t.threshold_2)});}
 }
@@ -744,7 +749,7 @@ function renderAsset(){
   } else {
     title.textContent=`Cumulatieve omzet YTD — ${Y}${cmpTxt}`;sub.textContent='Lopend totaal vanaf 1 januari · actuals doorgetrokken met forecast (gestippeld)';
     const act=omzetFor(Y);let last=-1;for(let i=0;i<12;i++)if(act[i]!=null)last=i;
-    const fcT=scenTargetFor(Y,'Forecast');const fc=fcT?shares.map(s=>Math.round(fcT*s)):null;
+    const fc=(FC_OMZET&&FC_OMZET[Y])?FC_OMZET[Y]:null;
     const blended=[];for(let i=0;i<12;i++)blended.push(act[i]!=null?act[i]:(fc?fc[i]:null));
     const cum=a=>{let s=0;return (a||[]).map(v=>v==null?null:(s+=v));};
     const dss=[{label:'Cumulatief YTD',data:cum(blended),borderColor:ORANGE,backgroundColor:'transparent',borderWidth:2,tension:.25,pointRadius:2,spanGaps:false,segment:{borderDash:ctx=>ctx.p1DataIndex>last?[5,4]:undefined}}];
@@ -912,18 +917,26 @@ function renderAssetStatic(a){
     photoEl.innerHTML=url?`<img src="${url}" alt="${a.name}">`:`<div class="asset-photo-ph">Geen foto beschikbaar</div>`;
   }
   // Statische velden (mix: Supabase indien aanwezig, anders uit ASSETS)
+  const fmtD=d=>{if(!d)return '—';const p=String(d).slice(0,10).split('-');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:String(d);};
+  const pctf=v=>v!=null?(Number(v)*100).toFixed(2).replace('.',',')+'%':'—';
   const rows=[
     ['Adres', st.address||`${a.city}`],
     ['Plaats', st.city||a.city],
-    ['Asset-class', st.asset_class||'Parkeren'],
+    ['Gebruik', st.use||'Parkeren'],
+    ['Eigendom', st.tenure||'—'],
+    ['Ligging', st.location||'—'],
     ['Aantal plaatsen', (st.capacity||a.spaces)+' parkeerplaatsen'],
     ['Bouwjaar', st.bouwjaar||'—'],
-    ['Verdiepingen', st.verdiepingen||'—'],
-    ['Energielabel', st.energielabel||'—'],
-    ['Laadpunten', st.laadpunten!=null?st.laadpunten:'—'],
+    ['Verdiepingen', st.verdiepingen!=null?st.verdiepingen:'—'],
+    ['Laadpunten', st.laadpalen!=null?st.laadpalen:'—'],
     ['Huurder', st.huurder||a.tenant],
+    ['Aankoopprijs', st.purchase_price!=null?fmtEUR(st.purchase_price):'—'],
+    ['Aankoopdatum', fmtD(st.purchase_date)],
+    ['Totale investering', st.total_investment!=null?fmtEUR(st.total_investment):'—'],
     ['Taxatiewaarde', st.latest_fair_value?fmtEUR(st.latest_fair_value):fmtEUR(a.fv)],
-    ['Taxatiedatum', st.fair_value_date||'—'],
+    ['Taxatiedatum', fmtD(st.fair_value_date)],
+    ['Aanvangsrendement', (st.giy!=null||st.niy!=null)?`GIY ${pctf(st.giy)} · NIY ${pctf(st.niy)}`:'—'],
+    ['Bezetting', st.occupancy!=null?(Number(st.occupancy)*100).toFixed(0)+'%':'—'],
   ];
   document.getElementById('assetStaticBody').innerHTML=rows.map(([k,v])=>
     `<div class="static-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
@@ -986,7 +999,7 @@ function renderAssetFinancials(){
 function renderRentRollAsset(){
   const sel=selList();const a=sel[0];if(!a)return;
   document.getElementById('rrAssetBody').innerHTML=
-    `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrAssetRatio">&mdash;</td></tr>`;
+    `<tr><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right" id="rrAssetFixed">${fmtEUR(a.fixed)}</td><td class="tr-right" id="rrAssetTurn">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrAssetRatio">&mdash;</td></tr>`;
 }
 
 async function loadAssetViewKpis(){
@@ -1002,6 +1015,8 @@ async function loadAssetViewKpis(){
     setTxt('kpiTothuur',fmtEUR(Math.round(t.verwachte_totale_huur)));
     setTxt('kpiHuurOmzet',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
     setTxt('rrAssetRatio',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
+    setTxt('rrAssetTurn',fmtEUR(Math.round(t.verwachte_omzethuur)));
+    setTxt('rrAssetFixed',fmtEUR(Math.round(t.verwachte_totale_huur-t.verwachte_omzethuur)));
   }
   // Direct rendement (laatste kwartaal t/m vandaag) + QoQ-delta
   const scen=await getScenarioId();
@@ -1070,8 +1085,13 @@ async function renderReserves(oId,mId){
 async function loadPortViewKpis(){
   if(!state.fundId)return;
   const scen=await getScenarioId();
-  const tre=await sbGet(`v_turnover_rent_expectation?select=huur_omzet_ratio`);
-  if(tre&&tre.length){setTxt('rrRatio_sjp',(tre[0].huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');}
+  const tre=await sbGet(`v_turnover_rent_expectation?select=huur_omzet_ratio,verwachte_omzethuur,verwachte_totale_huur`);
+  if(tre&&tre.length){const t=tre[0];
+    setTxt('rrRatio_sjp',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
+    const turn=Math.round(t.verwachte_omzethuur),fixed=Math.round(t.verwachte_totale_huur-t.verwachte_omzethuur);
+    setTxt('rrTurn_sjp',fmtEUR(turn));setTxt('rrFixed_sjp',fmtEUR(fixed));
+    setTxt('rrTotTurn',fmtEUR(turn));setTxt('rrTotFixed',fmtEUR(fixed));
+  }
   if(!scen)return;
   const pr=await sbGet(`v_property_returns?select=period_end,nri,direct_yield,direct_yield_delta,period_type,fund_year&scenario_id=eq.${scen}&order=period_end.asc`);
   if(pr&&pr.length){
@@ -1123,7 +1143,7 @@ function renderForecast(){
 
 function assetPnl(a){const gri=a.fixed+a.turn,r=gri/SJP_GRI;const opex={};let opexTot=0;for(const k in SJP_OPEX){opex[k]=Math.round(SJP_OPEX[k]*r);opexTot+=opex[k];}const nri=gri-opexTot,nonopex=Math.round(SJP_NONOPEX*r),interest=Math.round(a.fv*RATE_ON_VALUE);return {fixed:a.fixed,turn:a.turn,gri,opex,opexTot,nri,nonopex,interest,net:nri-nonopex-interest};}
 function renderPnl(){const sel=selList();const C={fixed:0,turn:0,gri:0,opex:{},opexTot:0,nri:0,nonopex:0,interest:0,net:0};for(const k in SJP_OPEX)C.opex[k]=0;sel.forEach(a=>{const p=assetPnl(a);C.fixed+=p.fixed;C.turn+=p.turn;C.gri+=p.gri;C.opexTot+=p.opexTot;C.nri+=p.nri;C.nonopex+=p.nonopex;C.interest+=p.interest;C.net+=p.net;for(const k in p.opex)C.opex[k]+=p.opex[k];});document.getElementById('pnlYr').textContent=`· ${sel.length} asset(s) · ${state.year} (prognose)`;let r='';r+=`<tr><td>Vaste huur (fixed rental income)</td><td class="tr-right">${fmtEUR(C.fixed)}</td></tr>`;r+=`<tr><td>Variabele (omzet)huur</td><td class="tr-right">${fmtEUR(C.turn)}</td></tr>`;r+=`<tr class="total"><td>Bruto huurinkomsten (GRI)</td><td class="tr-right">${fmtEUR(C.gri)}</td></tr>`;for(const k in C.opex)r+=`<tr class="sub"><td>${k}</td><td class="tr-right">− ${fmtEUR(C.opex[k])}</td></tr>`;r+=`<tr><td>Totale exploitatielasten</td><td class="tr-right">− ${fmtEUR(C.opexTot)}</td></tr>`;r+=`<tr class="total"><td>Netto huurinkomsten (NRI)</td><td class="tr-right">${fmtEUR(C.nri)}</td></tr>`;r+=`<tr><td>Niet-operationele lasten</td><td class="tr-right">− ${fmtEUR(C.nonopex)}</td></tr>`;r+=`<tr><td>Rentelasten</td><td class="tr-right">− ${fmtEUR(C.interest)}</td></tr>`;r+=`<tr class="total"><td>Netto resultaat</td><td class="tr-right">${fmtEUR(C.net)}</td></tr>`;document.getElementById('pnlBody').innerHTML=r;}
-function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right">${fmtEUR(a.fixed)}</td><td class="tr-right">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrRatio_${a.id}">&mdash;</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td></td><td class="tr-right">${tS}</td><td class="tr-right">${fmtEUR(tF)}</td><td class="tr-right">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td><td class="tr-right">&mdash;</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
+function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right" id="rrFixed_${a.id}">${fmtEUR(a.fixed)}</td><td class="tr-right" id="rrTurn_${a.id}">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrRatio_${a.id}">&mdash;</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td></td><td class="tr-right">${tS}</td><td class="tr-right" id="rrTotFixed">${fmtEUR(tF)}</td><td class="tr-right" id="rrTotTurn">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td><td class="tr-right">&mdash;</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
 
 function portAgg(){const sel=selList();const fv=sel.reduce((s,a)=>s+a.fv,0),fixed=sel.reduce((s,a)=>s+a.fixed,0),turn=sel.reduce((s,a)=>s+a.turn,0),spaces=sel.reduce((s,a)=>s+a.spaces,0),gross=fixed+turn,nri=gross*NRI_FACTOR;const occ=spaces?sel.reduce((s,a)=>s+a.occ*a.spaces,0)/spaces:0;const walt=fv?sel.reduce((s,a)=>s+a.walt*a.fv,0)/fv:0;return {sel,fv,fixed,turn,gross,nri,spaces,occ,walt,bar:gross/fv,nar:nri/fv};}
 function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML='<tr><td colspan="2" style="color:var(--text2)">Laden&hellip;</td></tr>';document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderPnlTable('pf');loadPortViewKpis();renderReserves('pfOnderhoudChart','pfMarketingChart');if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
@@ -1243,8 +1263,12 @@ async function loadAssetStatic(){
         capacity:sb.capacity, latest_fair_value:sb.latest_fair_value?Number(sb.latest_fair_value):null,
         fair_value_date:sb.fair_value_date,
         bouwjaar:sb.construction_year||sb.attributes?.bouwjaar,
-        verdiepingen:sb.attributes?.verdiepingen, energielabel:sb.attributes?.energielabel,
-        laadpunten:sb.attributes?.laadpunten, huurder:sb.attributes?.huurder, photo_url:sb.attributes?.photo_url
+        huurder:sb.attributes?.huurder, photo_url:sb.attributes?.photo_url,
+        tenure:sb.attributes?.tenure, location:sb.attributes?.location, use:sb.attributes?.use,
+        purchase_price:sb.attributes?.purchase_price, purchase_date:sb.attributes?.purchase_date,
+        total_investment:sb.attributes?.total_investment,
+        giy:sb.attributes?.giy, niy:sb.attributes?.niy, occupancy:sb.attributes?.occupancy,
+        verdiepingen:sb.attributes?.verdiepingen, laadpalen:sb.attributes?.laadpalen
       };
       assetStaticCache[sb.id]=data;
       if(local) assetStaticCache[local.id]=data;
