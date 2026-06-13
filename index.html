@@ -169,7 +169,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 <header>
  <div class="logo"><div class="logo-mark">OIM</div><div><div class="logo-text">Fondsmanager-dashboard<span class="concept-pill">Concept</span></div><div class="logo-sub">Orange IM · multi-fonds · multi-asset-class</div></div></div>
  <div class="controls">
-  <div class="ctrl"><span class="ctrl-label">Actief fonds</span><div class="fund-active-label muted" id="fundActiveLabel">— geen fonds geselecteerd</div></div>
+  <div class="ctrl"><span class="ctrl-label">Actief fonds</span><div class="fund-active-label muted" id="fundActiveLabel">— geen fonds geselecteerd</div><span id="exitFund" title="Terug naar fondsenoverzicht" style="font-size:11px;color:var(--text3);cursor:pointer;text-align:right;align-self:stretch;text-decoration:underline">Exit</span></div>
  </div>
 </header>
 
@@ -1319,6 +1319,7 @@ const cmpSel=document.getElementById('cmpSel');
 cmpSel.value=state.compare;
 cmpSel.addEventListener('change',e=>{state.compare=e.target.value;updateCtx();renderAsset();if(state.tab==='fonds')renderForecast();});
 placeOmzetControls(state.tab);
+document.getElementById('exitFund').addEventListener('click',()=>location.reload());
 
 function initApp(){renderChips();updateCtx();renderReport('participant');fitScroll();}
 
