@@ -278,10 +278,10 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
-   <thead><tr><th>Post</th><th class="tr-right" id="pfPnlColA">Fondsjaar 1</th><th class="tr-right" id="pfPnlColB">Fondsjaar 2</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <thead><tr><th>Post</th><th class="tr-right" id="pfPnlColA">2025</th><th class="tr-right" id="pfPnlColB">2026</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
    <tbody id="pfPnlBody"><tr><td colspan="5" style="color:var(--text2)">Laden&hellip;</td></tr></tbody>
   </table>
-  <div class="hint">Conform de Argus-cashflow, per fondsjaar tot NRI. Δ = kolom A − kolom B.</div>
+  <div class="hint">Conform de Argus-cashflow, per kalenderjaar tot NRI. Δ = kolom A − kolom B.</div>
  </div>
  <div class="section-label mt12">Reserves &amp; onderhoud (geconsolideerd) <span class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">&middot; over geselecteerde assets</span></div>
  <div class="grid2">
@@ -312,9 +312,9 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label" id="kpiOmzetLbl">Parkeeromzet</div><div class="kpi-val sm" id="kpiOmzet">&mdash;</div><div class="kpi-sub" id="kpiYoY"></div></div>
   <div class="kpi-card blue"><div class="kpi-label" id="kpiRunrateLbl">Run-rate jaaromzet</div><div class="kpi-val sm" id="kpiRunrate">&mdash;</div><div class="kpi-sub" id="kpiVsScen"></div></div>
-  <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="kpiWalt">&mdash;</div><div class="kpi-sub">resterende looptijd huur</div></div>
-  <div class="kpi-card orange"><div class="kpi-label">Verwachte omzethuur</div><div class="kpi-val sm" id="kpiOmzethuur">&mdash;</div><div class="kpi-sub">run-rate via drempelstaffel</div></div>
   <div class="kpi-card orange"><div class="kpi-label">Verwachte totale huur</div><div class="kpi-val sm" id="kpiTothuur">&mdash;</div><div class="kpi-sub">vaste + variabele huur</div></div>
+  <div class="kpi-card orange"><div class="kpi-label">Verwachte omzethuur</div><div class="kpi-val sm" id="kpiOmzethuur">&mdash;</div><div class="kpi-sub">run-rate via drempelstaffel</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">WALT</div><div class="kpi-val sm" id="kpiWalt">&mdash;</div><div class="kpi-sub">resterende looptijd huur</div></div>
   <div class="kpi-card blue"><div class="kpi-label">Huur/omzet-ratio</div><div class="kpi-val sm" id="kpiHuurOmzet">&mdash;</div><div class="kpi-sub">totale huur / parkeeromzet</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Direct rendement</div><div class="kpi-val sm" id="kpiDirect">&mdash;</div><div class="kpi-sub" id="kpiDirectDelta"></div></div>
   <div class="kpi-card gray"><div class="kpi-label">Indirect rendement</div><div class="kpi-val sm" id="kpiIndirect">&mdash;</div><div class="kpi-sub" id="kpiIndirectDelta">wacht op NAV-reeks</div></div>
@@ -338,11 +338,11 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label" id="opTxLbl">Parkeertransacties YTD</div><div class="kpi-val sm" id="opTx">&mdash;</div><div class="kpi-sub" id="opTxDelta"></div></div>
   <div class="kpi-card blue"><div class="kpi-label" id="opVptLbl">Waarde per transactie</div><div class="kpi-val sm" id="opVpt">&mdash;</div><div class="kpi-sub" id="opVptDelta"></div></div>
-  <div class="kpi-card gray"><div class="kpi-label">Gem. parkeerduur</div><div class="kpi-val sm" id="opDuur">&mdash;</div><div class="kpi-sub" id="opDuurSub">kortparkeren</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Gem. parkeerduur YTD</div><div class="kpi-val sm" id="opDuur">&mdash;</div><div class="kpi-sub" id="opDuurSub">kortparkeren</div></div>
   <div class="kpi-card green"><div class="kpi-label">Actieve abonnementen</div><div class="kpi-val sm" id="opAbo">&mdash;</div><div class="kpi-sub" id="opAboSub">aantal &middot; per soort</div></div>
  </div>
  <div class="chart-card mt12">
-  <div class="chart-header"><div><div class="chart-title">Parkeertransacties per week</div><div class="chart-subtitle">kortparkeerhandelingen per ISO-week &middot; vergelijk jaren onderling</div></div><div id="txYearPick" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div></div>
+  <div class="chart-header"><div><div class="chart-title">Parkeertransacties &amp; voluren per week</div><div class="chart-subtitle">kortparkeerhandelingen (links) &middot; voluren = uren garage vol (rechts) &middot; per ISO-week</div></div><div id="txYearPick" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div></div>
   <div class="chart-wrap"><canvas id="txChart"></canvas></div>
   <div class="hint">Selecteer jaren om lijnen te tonen of te verbergen. Waarde per transactie = kortparkeeromzet &divide; kortparkeertransacties over de volledige maanden YTD. Bron: Q-Park week- en kwartaalrapport.</div>
  </div>
@@ -357,10 +357,10 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
-   <thead><tr><th>Post</th><th class="tr-right" id="assetPnlColA">Fondsjaar 1</th><th class="tr-right" id="assetPnlColB">Fondsjaar 2</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
+   <thead><tr><th>Post</th><th class="tr-right" id="assetPnlColA">2025</th><th class="tr-right" id="assetPnlColB">2026</th><th class="tr-right">Δ</th><th class="tr-right">Δ%</th></tr></thead>
    <tbody id="assetPnlBody"><tr><td colspan="5" style="color:var(--text2)">Laden&hellip;</td></tr></tbody>
   </table>
-  <div class="hint">Conform de Argus-cashflow, per fondsjaar tot Netto huurinkomsten (NRI). Δ = kolom A − kolom B.</div>
+  <div class="hint">Conform de Argus-cashflow, per kalenderjaar tot Netto huurinkomsten (NRI). Δ = kolom A − kolom B.</div>
  </div>
 
  <!-- PARKEERTARIEVEN -->
@@ -778,10 +778,29 @@ function updateOperationalKpis(){
     setTxt('opVptLbl', `Waarde per transactie · YTD ${MAAND[ms[0]]}–${MAAND[ms[ms.length-1]]}`);
     document.getElementById('opVptDelta').innerHTML = vp? deltaBadge(v.vpt,vp.vpt,`${Y-1} (z.p.)`) : `<span class="badge b-gray">${v.tx.toLocaleString('nl-NL')} transacties</span>`;
   } else { setTxt('opVpt','—'); setTxt('opVptLbl','Waarde per transactie'); document.getElementById('opVptDelta').innerHTML=`<span class="badge b-gray">wacht op omzet + transacties</span>`; }
-  // gem. parkeerduur (laatste beschikbare week)
-  const du=(OPER.gem_parkeerduur&&OPER.gem_parkeerduur[Y])||(OPER.gem_parkeerduur&&OPER.gem_parkeerduur[Y-1]);
-  if(du){ const ws=Object.keys(du).map(Number).sort((a,b)=>a-b); const lw=ws[ws.length-1]; setTxt('opDuur', du[lw].toFixed(2).replace('.',',')+' u'); setTxt('opDuurSub', `kortparkeren · laatste week (wk ${lw})`); }
-  else { setTxt('opDuur','—'); }
+  // gem. parkeerduur YTD = totaal kortparkeeruren / totaal handelingen (val terug op vorig jaar)
+  function duurYTD(yr){
+    const uren=OPER.kortparkeeruren&&OPER.kortparkeeruren[yr];
+    const hand=OPER.kortparkeerhandelingen&&OPER.kortparkeerhandelingen[yr];
+    if(uren&&hand){
+      let su=0,sh=0; Object.keys(uren).map(Number).forEach(w=>{ if(hand[w]!=null){su+=uren[w];sh+=hand[w];} });
+      if(sh>0) return {u:su/sh, weeks:Object.keys(uren).length};
+    }
+    // fallback: transactie-gewogen gemiddelde van de wekelijkse gem_parkeerduur
+    const gd=OPER.gem_parkeerduur&&OPER.gem_parkeerduur[yr];
+    if(gd&&hand){ let num=0,den=0; Object.keys(gd).map(Number).forEach(w=>{ if(hand[w]!=null){num+=gd[w]*hand[w];den+=hand[w];} }); if(den>0) return {u:num/den, weeks:Object.keys(gd).length}; }
+    return null;
+  }
+  const dy=duurYTD(Y)||duurYTD(Y-1);
+  if(dy){
+    setTxt('opDuur', dy.u.toFixed(2).replace('.',',')+' u');
+    // voluren YTD (uren dat de garage vol stond)
+    const vu=(OPER.voluren&&OPER.voluren[Y])||(OPER.voluren&&OPER.voluren[Y-1]);
+    if(vu){ const sv=Object.keys(vu).map(Number).reduce((s,w)=>s+(vu[w]||0),0);
+      setTxt('opDuurSub', `kortparkeren · ${sv.toLocaleString('nl-NL',{maximumFractionDigits:1})} voluren YTD`); }
+    else setTxt('opDuurSub','kortparkeren · YTD');
+  }
+  else { setTxt('opDuur','—'); setTxt('opDuurSub','kortparkeren'); }
   // abonnementen
   if(SUBS && SUBS.length){ const tot=SUBS.reduce((s,x)=>s+(+x.qty||0),0); setTxt('opAbo', tot.toLocaleString('nl-NL')); setTxt('opAboSub', `${SUBS.length} soorten · grootste: Kantoor`); setTxt('operPeil', `· peilweek ${SUBS[0].asof_year}-w${SUBS[0].asof_week}`); }
   else { setTxt('opAbo','—'); }
@@ -801,12 +820,25 @@ function renderTxChart(){
   if(maxW<1)maxW=1;
   const labels=[]; for(let w=1;w<=maxW;w++) labels.push('w'+w);
   const palArr=[ORANGE,BLUE,AMBER,GREEN,'#7C3AED','#0891B2','#DB2777'];
-  const dss=years.filter(y=>_txYears.has(y)).map(y=>{
+  const selYears=years.filter(y=>_txYears.has(y));
+  const dss=selYears.map(y=>{
     const o=M[y], data=[]; for(let w=1;w<=maxW;w++) data.push(o[w]!=null?o[w]:null);
     const col=palArr[years.indexOf(y)%palArr.length];
-    return {label:String(y),data,borderColor:col,backgroundColor:'transparent',borderWidth:2,tension:.3,pointRadius:2,spanGaps:false};
+    return {type:'line',label:String(y),data,borderColor:col,backgroundColor:'transparent',borderWidth:2,tension:.3,pointRadius:2,spanGaps:false,yAxisID:'y'};
   });
-  txChart=new Chart(cv,{type:'line',data:{labels,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':c.raw.toLocaleString('nl-NL'))+' transacties'}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,ticks:{...gridOpt.ticks,callback:v=>v.toLocaleString('nl-NL')}}}}});
+  // voluren per week (tweede y-as) voor geselecteerde jaren met data
+  const V=OPER.voluren||{};
+  let hasVol=false;
+  selYears.forEach(y=>{
+    if(!V[y])return; hasVol=true;
+    const data=[]; for(let w=1;w<=maxW;w++) data.push(V[y][w]!=null?V[y][w]:null);
+    const col=palArr[years.indexOf(y)%palArr.length];
+    dss.push({type:'bar',label:`Voluren ${y}`,data,backgroundColor:col+'33',borderColor:col+'66',borderWidth:1,yAxisID:'y1',order:99});
+  });
+  const scales={x:gridOpt,
+    y:{...gridOpt,position:'left',beginAtZero:true,title:{display:true,text:'Handelingen',color:'#9CA3AF',font:{size:10}},ticks:{...gridOpt.ticks,callback:v=>v.toLocaleString('nl-NL')}}};
+  if(hasVol) scales.y1={...gridOpt,position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'Voluren',color:'#9CA3AF',font:{size:10}},ticks:{...gridOpt.ticks,callback:v=>v.toLocaleString('nl-NL',{maximumFractionDigits:1})}};
+  txChart=new Chart(cv,{data:{labels,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>{const isVol=c.dataset.yAxisID==='y1';return c.dataset.label+': '+(c.raw==null?'—':c.raw.toLocaleString('nl-NL',{maximumFractionDigits:isVol?2:0}))+(isVol?' voluren':' transacties');}}}},scales}});
 }
 
 function renderAsset(){
@@ -1364,7 +1396,7 @@ async function renderFinCovenants(){
     const v=actuals[c.metric];if(v==null)return '';
     const ok=c.operator==='<='?v<=Number(c.threshold):v>=Number(c.threshold);
     return `<div class="conv-row"><div class="conv-left"><span class="dot" style="background:${ok?'var(--green)':'var(--red)'}"></span><div><div style="font-weight:500">${c.metric}</div><div style="font-size:11px;color:var(--text2)">huidige waarde ${f(v,c.metric)} · drempel ${c.operator} ${f(Number(c.threshold),c.metric)}</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px;color:${ok?'var(--green)':'var(--red)'}">${ok?'OK':'BREACH'}</div><div style="font-size:11px;color:var(--text3)">test: ${c.test_frequency||'halfjaar'}</div></div></div>`;
-  }).join('')+`<div class="hint mt12">LTV = schuld / taxatiewaarde · ICR = NRI / rentelasten · DSCR = NRI / (rente + aflossing). NRI uit Business Plan (fondsjaar 1); rente € ${(rente/1000).toFixed(0)}k, aflossing € ${(afl/1000).toFixed(0)}k p.j.</div>`;
+  }).join('')+`<div class="hint mt12">LTV = schuld / taxatiewaarde · ICR = NRI / rentelasten · DSCR = NRI / (rente + aflossing). NRI uit Business Plan (lopend jaar); rente € ${(rente/1000).toFixed(0)}k, aflossing € ${(afl/1000).toFixed(0)}k p.j.</div>`;
 }
 
 function renderFinanciering(){
