@@ -269,10 +269,12 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
  </div>
- <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI &middot; <span class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">Business Plan IM</span>
-  <select id="pfPnlFyA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
-  <span style="color:var(--text2);font-size:12px;margin:0 4px">vs</span>
-  <select id="pfPnlFyB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+ <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI
+  <select id="pfPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="pfPnlFyA" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <span style="color:var(--text2);font-size:12px;margin:0 6px">vs</span>
+  <select id="pfPnlScenB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="pfPnlFyB" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
@@ -346,10 +348,12 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  </div>
 
  <!-- FINANCIËLE RESULTATEN · RESULTATENREKENING TOT NRI (Argus, vergelijking) -->
- <div class="section-label mt12">Financiële resultaten &middot; resultatenrekening tot NRI &middot; <span id="assetPnlScen" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">Business Plan IM</span>
-  <select id="assetPnlFyA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
-  <span style="color:var(--text2);font-size:12px;margin:0 4px">vs</span>
-  <select id="assetPnlFyB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+ <div class="section-label mt12">Financiële resultaten &middot; resultatenrekening tot NRI
+  <select id="assetPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="assetPnlFyA" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <span style="color:var(--text2);font-size:12px;margin:0 6px">vs</span>
+  <select id="assetPnlScenB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="assetPnlFyB" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
@@ -1137,25 +1141,75 @@ async function loadAssetViewKpis(){
   }
 }
 
+// Scenariolijst (cachet) — gevuld vanuit de scenarios-tabel
+let _scenList=null;
+async function loadScenarios(){
+  if(_scenList)return _scenList;
+  if(!state.fundId)return [];
+  const rows=await sbGet(`scenarios?select=id,name,created_at&fund_id=eq.${state.fundId}&order=created_at.asc`);
+  _scenList=(rows||[]).slice();
+  // Business Plan IM vooraan zetten zodat dat de standaardreferentie (kolom A) is
+  _scenList.sort((a,b)=>{
+    const ba=/business plan/i.test(a.name)?0:1, bb=/business plan/i.test(b.name)?0:1;
+    return ba-bb || new Date(a.created_at)-new Date(b.created_at);
+  });
+  return _scenList;
+}
+// Vul/ververs de fondsjaar-dropdown voor het gekozen scenario; behoudt geldige selectie
+const _fyScen={};
+async function ensureFyOptions(key, sel, scenId){
+  if(_fyScen[key]===scenId && sel.options.length) return;
+  const fys=await sbGet(`v_pnl_to_nri?select=fund_year&scenario_id=eq.${scenId}&period_type=eq.fy&order=fund_year.asc`);
+  const uniq=[...new Set((fys||[]).map(r=>r.fund_year))];
+  const prev=+sel.value;
+  sel.innerHTML=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');
+  sel.value=uniq.includes(prev)?prev:(uniq[0]||1);
+  _fyScen[key]=scenId;
+}
 const _pnlInit={};
 async function renderPnlTable(prefix){
   if(!state.fundId)return;
-  const scen=await getScenarioId();
+  const scens=await loadScenarios();
+  if(!scens.length)return;
+  const scenA=document.getElementById(prefix+'PnlScenA'),scenB=document.getElementById(prefix+'PnlScenB');
   const selA=document.getElementById(prefix+'PnlFyA'),selB=document.getElementById(prefix+'PnlFyB'),body=document.getElementById(prefix+'PnlBody');
-  if(!scen||!selA||!selB||!body)return;
+  if(!selA||!selB||!body)return;
+
   if(!_pnlInit[prefix]){
-    const fys=await sbGet(`v_pnl_to_nri?select=fund_year&scenario_id=eq.${scen}&period_type=eq.fy&order=fund_year.asc`);
-    const uniq=[...new Set((fys||[]).map(r=>r.fund_year))];
-    if(uniq.length){const opt=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');selA.innerHTML=opt;selB.innerHTML=opt;selA.value=uniq[0];selB.value=uniq[1]||uniq[0];}
-    selA.onchange=()=>renderPnlTable(prefix);selB.onchange=()=>renderPnlTable(prefix);
+    if(scenA&&scenB){
+      const opts=scens.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      scenA.innerHTML=opts;scenB.innerHTML=opts;
+      const bp=scens[0]; // na sort: Business Plan IM (of oudste)
+      const other=scens.find(s=>s.id!==bp.id)||bp;
+      scenA.value=bp.id;scenB.value=other.id;
+      scenA.onchange=()=>{_fyScen[prefix+'A']=null;renderPnlTable(prefix);};
+      scenB.onchange=()=>{_fyScen[prefix+'B']=null;renderPnlTable(prefix);};
+    }
+    selA.onchange=()=>renderPnlTable(prefix);
+    selB.onchange=()=>renderPnlTable(prefix);
     _pnlInit[prefix]=true;
   }
+
+  const scenIdA=scenA?scenA.value:(await getScenarioId());
+  const scenIdB=scenB?scenB.value:scenIdA;
+  await ensureFyOptions(prefix+'A',selA,scenIdA);
+  await ensureFyOptions(prefix+'B',selB,scenIdB);
+
   const fyA=+selA.value||1,fyB=+selB.value||1;
-  setTxt(prefix+'PnlColA','Fondsjaar '+fyA);setTxt(prefix+'PnlColB','Fondsjaar '+fyB);
-  const rows=await sbGet(`v_pnl_to_nri?select=sort_order,label,level,signed_amount,fund_year&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=in.(${fyA},${fyB})&order=sort_order.asc`);
-  if(!rows||!rows.length){body.innerHTML='<tr><td colspan="5" style="color:var(--text2)">Geen data</td></tr>';return;}
+  const nmA=scenA?scenA.options[scenA.selectedIndex].text:'';
+  const nmB=scenB?scenB.options[scenB.selectedIndex].text:'';
+  setTxt(prefix+'PnlColA',(nmA?nmA+' · ':'')+'FJ '+fyA);
+  setTxt(prefix+'PnlColB',(nmB?nmB+' · ':'')+'FJ '+fyB);
+
+  const sel='sort_order,label,level,signed_amount';
+  const [rowsA,rowsB]=await Promise.all([
+    sbGet(`v_pnl_to_nri?select=${sel}&scenario_id=eq.${scenIdA}&period_type=eq.fy&fund_year=eq.${fyA}&order=sort_order.asc`),
+    sbGet(`v_pnl_to_nri?select=${sel}&scenario_id=eq.${scenIdB}&period_type=eq.fy&fund_year=eq.${fyB}&order=sort_order.asc`)
+  ]);
+  if((!rowsA||!rowsA.length)&&(!rowsB||!rowsB.length)){body.innerHTML='<tr><td colspan="5" style="color:var(--text2)">Geen data</td></tr>';return;}
   const map={};
-  rows.forEach(r=>{const k=r.sort_order;if(!map[k])map[k]={label:r.label,level:r.level,a:null,b:null};if(r.fund_year===fyA)map[k].a=Number(r.signed_amount);if(r.fund_year===fyB)map[k].b=Number(r.signed_amount);});
+  const put=(rows,side)=>{(rows||[]).forEach(r=>{const k=r.sort_order;if(!map[k])map[k]={label:r.label,level:r.level,a:null,b:null};map[k].label=r.label;map[k].level=r.level;map[k][side]=Number(r.signed_amount);});};
+  put(rowsA,'a');put(rowsB,'b');
   const ordered=Object.keys(map).map(Number).sort((x,y)=>x-y);
   body.innerHTML=ordered.map(k=>{
     const m=map[k];const va=m.a==null?0:m.a,vb=m.b==null?0:m.b,d=va-vb,dp=vb?((va/vb-1)*100):null;
@@ -1875,6 +1929,8 @@ async function uploadArgusScenario(fundId, file){
   }
   // Logboek-entry
   await sbPost('imports',[{fund_id:fundId,source_type:'other',scenario:name,file_name:file.name,status:'processed',rows_ingested:records.length,message:`Argus-scenario "${name}" · ${records.length} cashflow-regels`,imported_by:'dashboard'}]);
+  // Cache invalideren zodat het nieuwe scenario direct in de dropdowns verschijnt
+  _scenList=null; Object.keys(_pnlInit).forEach(k=>_pnlInit[k]=false); Object.keys(_fyScen).forEach(k=>_fyScen[k]=null);
   return records.length;
 }
 
