@@ -1059,7 +1059,7 @@ function renderAssetStatic(a){
   const photoEl=document.getElementById('assetPhoto');
   if(photoEl){
     const url=st.photo_url;
-    photoEl.innerHTML=url?`<img src="${url}" alt="${a.name}">`:`<div class="asset-photo-ph">Geen foto beschikbaar</div>`;
+    photoEl.innerHTML=url?`<img src="${url}" alt="${a.name}" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;asset-photo-ph&quot;>Geen foto beschikbaar</div>')">`:`<div class="asset-photo-ph">Geen foto beschikbaar</div>`;
   }
   // Statische velden (mix: Supabase indien aanwezig, anders uit ASSETS)
   const fmtD=d=>{if(!d)return '—';const p=String(d).slice(0,10).split('-');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:String(d);};
