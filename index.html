@@ -466,8 +466,8 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 
   <div class="upload-card" id="zone-qpark">
    <div class="uz-icon">🅿️</div>
-   <div class="uz-title">Q-Park omzet &amp; bezetting</div>
-   <div class="uz-sub">maandomzet · transacties · bezetting · .xlsx</div>
+   <div class="uz-title">Q-Park omzet &amp; operationeel</div>
+   <div class="uz-sub">kwartaalrapport (omzet) of weekrapport (operationeel) · .xlsx</div>
    <div class="uz-filename" id="file-qpark-name"></div>
    <div class="uz-actions">
     <label class="btn primary" for="file-qpark">Bestand kiezen</label>
@@ -511,6 +511,10 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="info-card" style="overflow-x:auto">
    <div id="preview-meta" class="note mb8"></div>
    <div id="preview-table"></div>
+  </div>
+  <div id="imp-pass-row" style="display:none;margin-top:12px">
+   <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Import-wachtwoord</label>
+   <input type="password" id="imp-pass" class="ctrl-select" style="max-width:280px" placeholder="vereist om naar de database te schrijven" autocomplete="off">
   </div>
   <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
    <button class="btn primary" id="btn-upload" onclick="startUpload()">↑ Uploaden naar database</button>
@@ -1395,7 +1399,7 @@ const SB_URL  = 'https://cksrnlxfsltivrtveypo.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrc3JubHhmc2x0aXZydHZleXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTk1NDYsImV4cCI6MjA5NjY5NTU0Nn0.VM5Jec2MvCHOJrpEnKGA8Aq3D6NPfLBtPHKWJRxqfb0';
 
 const UPLOAD_TYPES = {
-  qpark: { label: 'Q-Park omzet & bezetting', badge: 'b-orange', source_type: 'qpark_month' },
+  qpark: { label: 'Q-Park omzet & operationeel', badge: 'b-orange', source_type: 'qpark_month' },
   exact: { label: 'Exact Online export',       badge: 'b-blue',   source_type: 'other'       },
   argus: { label: 'Argus forecast',            badge: 'b-amber',  source_type: 'other'       },
 };
@@ -1439,6 +1443,13 @@ function parseFile(file, type) {
       }
       const filtered = rows.filter(r => r.some(c => c!=='' && c!=null));
       imp.rows = filtered;
+      if(type==='qpark'){
+        const q = parseQpark(imp.rawRows);
+        if(q){ imp.qpark=q; showQparkPreview(q, file.name); }
+        else { imp.qpark=null; showPreviewError('Onbekend Q-Park bestand. Verwacht het omzet-kwartaalrapport (blad met "Omzetoverzicht") of het week-/maandrapport (blad met "Kortparkeerhandelingen per week").'); }
+        return;
+      }
+      imp.qpark=null;
       showPreview(type, file.name, filtered);
     } catch(err) {
       showPreviewError('Kon bestand niet lezen: ' + err.message);
@@ -1447,7 +1458,106 @@ function parseFile(file, type) {
   reader.readAsArrayBuffer(file);
 }
 
+function parseQpark(raw){
+  const a1=String((raw[0]&&raw[0][0])||'');
+  // --- OMZET (kwartaalrapport): blok per "Boekjaar YYYY", regel "Totaal Parkeeromzet" ---
+  if(/omzetoverzicht/i.test(a1)){
+    const out=[]; let year=null, inB=false;
+    for(const r of raw){
+      const a=String((r&&r[0])||'').trim();
+      const ym=a.match(/^Boekjaar\s+(\d{4})/);
+      if(ym){ year=+ym[1]; inB=true; continue; }
+      if(inB && /^Totaal\s+Parkeeromzet/i.test(a) && year){
+        for(let mi=0;mi<12;mi++){
+          let v=r[1+mi];
+          if(v===''||v==null) continue;
+          const num=typeof v==='number'?v:parseFloat(String(v).replace(/[^0-9.\-]/g,''));
+          if(!(num>0)) continue;            // sla lege/toekomstige maanden over
+          const last=new Date(year,mi+1,0).getDate();
+          out.push({period_date:`${year}-${String(mi+1).padStart(2,'0')}-${String(last).padStart(2,'0')}`, value:Math.round(num*100)/100});
+        }
+      }
+    }
+    out.sort((a,b)=>a.period_date<b.period_date?-1:1);
+    return out.length?{kind:'omzet', rows:out}:null;
+  }
+  // --- OPERATIONEEL (weekrapport): blokken op vaste kolomposities ---
+  if(/kortparkeer/i.test(a1)){
+    const blocks=[['kortparkeerhandelingen',0,{2025:1,2026:2}],['kortparkeeruren',4,{2026:5}],['gem_parkeerduur',7,{2026:8}],['voluren',10,{2026:11}]];
+    const weekly=[];
+    for(const b of blocks){
+      const metric=b[0], wc=b[1], ycols=b[2];
+      for(let i=2;i<raw.length;i++){
+        const wk=raw[i]&&raw[i][wc];
+        if(typeof wk!=='number') continue;
+        for(const yr in ycols){
+          let v=raw[i][ycols[yr]];
+          if(v===''||v==null) continue;
+          const num=typeof v==='number'?v:parseFloat(v);
+          if(isNaN(num)) continue;
+          weekly.push({metric, year:+yr, week:wk, value:num});
+        }
+      }
+    }
+    const asof=String((raw[1]&&raw[1][13])||'');
+    const m=asof.match(/(\d{4}).*?w?(\d{1,2})/);
+    const ay=m?+m[1]:null, aw=m?+m[2]:null;
+    const subs=[];
+    for(let i=2;i<raw.length;i++){
+      const p=raw[i]&&raw[i][13], q=raw[i]&&raw[i][17];
+      if(p && q!==''&&q!=null && !isNaN(+q)) subs.push({product:String(p).trim(), qty:Math.round(+q), year:ay, week:aw});
+    }
+    return (weekly.length||subs.length)?{kind:'operational', weekly, subs, asof:{year:ay,week:aw}}:null;
+  }
+  return null;
+}
+
+function showQparkPreview(q, filename){
+  document.getElementById('imp-pass-row').style.display='block';
+  let meta, tbl='';
+  if(q.kind==='omzet'){
+    meta=`📄 ${filename} · Q-Park omzet (kwartaalrapport) · ${q.rows.length} maanden · upsert → parkeeromzet (actuals)`;
+    tbl='<table class="data-table" style="font-size:12px"><thead><tr><th>Maand</th><th class="tr-right">Parkeeromzet</th></tr></thead><tbody>';
+    if(q.rows.length>14) tbl+=`<tr><td colspan="2" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif">… ${q.rows.length-14} eerdere maanden</td></tr>`;
+    q.rows.slice(-14).forEach(r=>{ tbl+=`<tr><td>${r.period_date}</td><td class="tr-right">${fmtEUR(r.value)}</td></tr>`; });
+    tbl+='</tbody></table>';
+  } else {
+    const bm={};
+    q.weekly.forEach(w=>{ const k=w.metric+' '+w.year; (bm[k]=bm[k]||{n:0,last:null}); bm[k].n++; if(!bm[k].last||w.week>bm[k].last.week) bm[k].last=w; });
+    meta=`📄 ${filename} · Q-Park operationeel (weekrapport) · ${q.weekly.length} weekwaarden + ${q.subs.length} abonnementen · peilweek ${q.asof.year}-w${q.asof.week}`;
+    tbl='<table class="data-table" style="font-size:12px"><thead><tr><th>Metriek</th><th class="tr-right">Weken</th><th class="tr-right">Laatste</th><th class="tr-right">Waarde</th></tr></thead><tbody>';
+    Object.keys(bm).forEach(k=>{ const o=bm[k]; tbl+=`<tr><td>${k}</td><td class="tr-right">${o.n}</td><td class="tr-right">w${o.last.week}</td><td class="tr-right">${o.last.value}</td></tr>`; });
+    tbl+='</tbody></table>';
+    if(q.subs.length){
+      tbl+='<div style="margin-top:10px;font-size:12px;color:var(--text2)">Abonnementen (snapshot):</div><table class="data-table" style="font-size:12px"><thead><tr><th>Soort</th><th class="tr-right">Aantal</th></tr></thead><tbody>';
+      q.subs.forEach(s=>{ tbl+=`<tr><td>${s.product}</td><td class="tr-right">${s.qty}</td></tr>`; });
+      tbl+='</tbody></table>';
+    }
+  }
+  document.getElementById('preview-meta').textContent=meta;
+  document.getElementById('preview-table').innerHTML=tbl;
+  const el=document.getElementById('import-preview'); el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function uploadQpark(){
+  const pw=(document.getElementById('imp-pass')?.value||'').trim();
+  if(!pw) throw new Error('Vul het import-wachtwoord in.');
+  const q=imp.qpark; if(!q) throw new Error('Geen geldig Q-Park bestand geladen.');
+  let type, payload;
+  if(q.kind==='omzet'){ type='omzet'; payload={rows:q.rows, source:imp.file.name}; }
+  else { type='operational'; payload={weekly:q.weekly, subs:q.subs, source:imp.file.name}; }
+  const res=await fetch(`${SB_URL}/functions/v1/import-qpark`,{
+    method:'POST',
+    headers:{'content-type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+    body:JSON.stringify({token:pw, type, payload})
+  });
+  let j={}; try{ j=await res.json(); }catch(e){}
+  if(!res.ok || j.error) throw new Error(j.error || ('upload mislukt (HTTP '+res.status+')'));
+  return q.kind==='omzet' ? (j.omzet_rows||0) : ((j.weekly_rows||0)+(j.sub_rows||0));
+}
+
 function showPreview(type, filename, rows) {
+  const pr=document.getElementById('imp-pass-row'); if(pr)pr.style.display='none';
   const hdrs = rows[0] || [];
   const data = rows.slice(1,6);
   let tbl = '<table class="data-table" style="font-size:11px"><thead><tr>';
@@ -1464,6 +1574,7 @@ function showPreview(type, filename, rows) {
 }
 
 function showPreviewError(msg) {
+  const pr=document.getElementById('imp-pass-row'); if(pr)pr.style.display='none';
   document.getElementById('preview-meta').textContent = '⚠️ ' + msg;
   document.getElementById('preview-table').innerHTML = '';
   document.getElementById('import-preview').style.display = 'block';
@@ -1481,6 +1592,13 @@ function startUpload() {
     if(!nm){ alert('Geef eerst een scenarionaam op bij het Argus-blok.'); return; }
     document.getElementById('confirm-msg').innerHTML =
       `Je staat op het punt het bestand <strong>${imp.file.name}</strong> in te lezen als scenario <strong>"${nm}"</strong>.<br><br>De volledige cashflow (alle line items × alle perioden) wordt opgeslagen en komt beschikbaar in de vergelijk-dropdown.`;
+  } else if(imp.type==='qpark' && imp.qpark){
+    const pw=(document.getElementById('imp-pass')?.value||'').trim();
+    if(!pw){ alert('Vul eerst het import-wachtwoord in.'); return; }
+    const q=imp.qpark;
+    const what = q.kind==='omzet' ? `${q.rows.length} maanden parkeeromzet` : `${q.weekly.length} weekwaarden + ${q.subs.length} abonnementen`;
+    document.getElementById('confirm-msg').innerHTML =
+      `Je staat op het punt <strong>${what}</strong> uit <strong>${imp.file.name}</strong> naar de database te schrijven via de beveiligde import-functie.<br><br>Bestaande waarden voor dezelfde periode worden overschreven (upsert).`;
   } else {
     document.getElementById('confirm-msg').innerHTML =
       `Je staat op het punt <strong>${imp.rows.length-1} rijen</strong> uit <strong>${imp.file.name}</strong> te uploaden als <em>${UPLOAD_TYPES[imp.type].label}</em>.<br><br>Bestaande data voor dezelfde periode wordt overschreven (upsert).`;
@@ -1515,6 +1633,9 @@ async function doUpload(type, file, rows) {
 
   // Argus: volledige cashflow parsen en als scenario wegschrijven
   if(type==='argus') return await uploadArgusScenario(fundId, file);
+
+  // Q-Park: omzet- of weekrapport via beveiligde edge function
+  if(type==='qpark'){ if(!imp.qpark) throw new Error('Niet-herkend Q-Park bestand.'); return await uploadQpark(); }
 
   const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
   const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
