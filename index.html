@@ -331,6 +331,20 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="hint">Klik op een balk om in te zoomen: jaar &rarr; halfjaar &rarr; kwartaal &rarr; maand &rarr; dag. Vergelijkingsreeks volgt de selector "Vergelijk met".</div>
  </div>
 
+ <!-- OPERATIONELE PERFORMANCE (Q-Park) -->
+ <div class="section-label mt12">Operationele performance &middot; Q-Park <span id="operPeil" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)"></span></div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label" id="opTxLbl">Parkeertransacties YTD</div><div class="kpi-val sm" id="opTx">&mdash;</div><div class="kpi-sub" id="opTxDelta"></div></div>
+  <div class="kpi-card blue"><div class="kpi-label" id="opVptLbl">Waarde per transactie</div><div class="kpi-val sm" id="opVpt">&mdash;</div><div class="kpi-sub" id="opVptDelta"></div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Gem. parkeerduur</div><div class="kpi-val sm" id="opDuur">&mdash;</div><div class="kpi-sub" id="opDuurSub">kortparkeren</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Actieve abonnementen</div><div class="kpi-val sm" id="opAbo">&mdash;</div><div class="kpi-sub" id="opAboSub">aantal &middot; per soort</div></div>
+ </div>
+ <div class="chart-card mt12">
+  <div class="chart-header"><div><div class="chart-title">Parkeertransacties per week</div><div class="chart-subtitle">kortparkeerhandelingen per ISO-week &middot; vergelijk jaren onderling</div></div><div id="txYearPick" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div></div>
+  <div class="chart-wrap"><canvas id="txChart"></canvas></div>
+  <div class="hint">Selecteer jaren om lijnen te tonen of te verbergen. Waarde per transactie = kortparkeeromzet &divide; kortparkeertransacties over de volledige maanden YTD. Bron: Q-Park week- en kwartaalrapport.</div>
+ </div>
+
  <!-- FINANCIËLE RESULTATEN · RESULTATENREKENING TOT NRI (Argus, vergelijking) -->
  <div class="section-label mt12">Financiële resultaten &middot; resultatenrekening tot NRI &middot; <span id="assetPnlScen" class="mono" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text2)">Business Plan IM</span>
   <select id="assetPnlFyA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
@@ -662,6 +676,7 @@ function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){stat
 function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
 
 let REAL_OMZET=null, FC_OMZET=null, IM_OMZET=null, DREMPELS=null, _omzetLoaded=false, _omzetLoading=false;
+let txChart, OPER=null, SUBS=null, OMZET_KORT_S=null, _operLoaded=false, _operLoading=false, _txYears=null;
 async function loadOmzetActuals(){
   // Echte maand-actuals (Q-Park) injecteren in het omzetmodel van SJP
   const rows=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000001&scenario=eq.actuals&grain=eq.maand&order=period_date.asc`);
@@ -704,6 +719,92 @@ function renderYtdYearPick(){
   pick.querySelectorAll('button[data-yy]').forEach(b=>b.onclick=()=>{const yy=+b.dataset.yy;_ytdYears.has(yy)?_ytdYears.delete(yy):_ytdYears.add(yy);renderAsset();});
 }
 
+// ---- Operationele Q-Park data (week) ----
+async function loadOperational(){
+  const rows=await sbGet(`qpark_operational?select=metric,period_year,period_week,value&order=period_year.asc,period_week.asc`);
+  const O={};
+  (rows||[]).forEach(r=>{const m=r.metric,y=+r.period_year,w=+r.period_week,v=Number(r.value);(O[m]=O[m]||{});(O[m][y]=O[m][y]||{});O[m][y][w]=v;});
+  OPER=O;
+  SUBS=(await sbGet(`qpark_subscriptions?select=product,qty,asof_year,asof_week&order=asof_week.desc`))||[];
+  const ko=await sbGet(`kpi_values?select=period_date,value&kpi_id=eq.0000aaaa-0000-0000-0000-000000000004&scenario=eq.actuals&grain=eq.maand&order=period_date.asc`);
+  const K={}; (ko||[]).forEach(r=>{const y=+r.period_date.slice(0,4),m=+r.period_date.slice(5,7)-1;(K[y]=K[y]||Array(12).fill(null))[m]=Number(r.value);}); OMZET_KORT_S=K;
+}
+// ISO-week -> maand (0-11), op basis van de donderdag van de week
+function isoWeekMonth(year,week){
+  const jan4=new Date(Date.UTC(year,0,4));
+  const dow=(jan4.getUTCDay()+6)%7;            // 0=ma
+  const thu=new Date(jan4); thu.setUTCDate(jan4.getUTCDate()-dow+3+(week-1)*7);
+  return thu.getUTCMonth();
+}
+function txWeeksOf(year){ return (OPER&&OPER.kortparkeerhandelingen&&OPER.kortparkeerhandelingen[year])||null; }
+function txYTDof(year){ const o=txWeeksOf(year); if(!o)return {sum:0,weeks:0,maxWeek:0}; const ws=Object.keys(o).map(Number).sort((a,b)=>a-b); let s=0; ws.forEach(w=>s+=o[w]); return {sum:Math.round(s),weeks:ws.length,maxWeek:ws.length?Math.max(...ws):0}; }
+function vptForMonths(year, monthsSet){
+  const ko=OMZET_KORT_S&&OMZET_KORT_S[year], o=txWeeksOf(year);
+  if(!ko||!o||!monthsSet||!monthsSet.size) return null;
+  let tx=0; Object.keys(o).map(Number).forEach(w=>{ if(monthsSet.has(isoWeekMonth(year,w))) tx+=o[w]; });
+  let omz=0; for(const m of monthsSet){ if(ko[m]==null) return null; omz+=ko[m]; }   // omzet voor álle maanden vereist
+  if(!tx) return null;
+  return {vpt:omz/tx, tx, omz};
+}
+// volledige maanden in lopend jaar: omzet aanwezig én door weken gedekt
+function currentVptMonths(year){
+  const ko=OMZET_KORT_S&&OMZET_KORT_S[year], o=txWeeksOf(year);
+  if(!ko||!o) return null;
+  const omzetMonths=new Set(); for(let m=0;m<12;m++) if(ko[m]!=null) omzetMonths.add(m);
+  const used=new Set(); Object.keys(o).map(Number).forEach(w=>{ const mm=isoWeekMonth(year,w); if(omzetMonths.has(mm)) used.add(mm); });
+  return used.size?used:null;
+}
+function updateOperationalKpis(){
+  if(!OPER) return;
+  const Y=state.year;
+  // transacties YTD + Δ t.o.v. zelfde aantal weken vorig jaar
+  const cur=txYTDof(Y);
+  setTxt('opTxLbl', `Parkeertransacties YTD ${Y}`);
+  setTxt('opTx', cur.sum? cur.sum.toLocaleString('nl-NL') : '—');
+  let dHtml=`<span class="badge b-gray">geen vergelijking</span>`;
+  const po=txWeeksOf(Y-1);
+  if(cur.sum && po){ let ps=0,has=false; for(let w=1;w<=cur.maxWeek;w++) if(po[w]!=null){ps+=po[w];has=true;} if(has&&ps>0) dHtml=deltaBadge(cur.sum,ps,`${Y-1} (t/m wk ${cur.maxWeek})`); }
+  document.getElementById('opTxDelta').innerHTML=dHtml;
+  // waarde per transactie (kortparkeeromzet / kortparkeertransacties, volledige maanden YTD; jaren over dezelfde maanden vergeleken)
+  const vMonths=currentVptMonths(Y);
+  const v=vMonths?vptForMonths(Y,vMonths):null, vp=vMonths?vptForMonths(Y-1,vMonths):null;
+  if(v){
+    const ms=[...vMonths].sort((a,b)=>a-b);
+    setTxt('opVpt', '€ '+v.vpt.toFixed(2).replace('.',','));
+    setTxt('opVptLbl', `Waarde per transactie · YTD ${MAAND[ms[0]]}–${MAAND[ms[ms.length-1]]}`);
+    document.getElementById('opVptDelta').innerHTML = vp? deltaBadge(v.vpt,vp.vpt,`${Y-1} (z.p.)`) : `<span class="badge b-gray">${v.tx.toLocaleString('nl-NL')} transacties</span>`;
+  } else { setTxt('opVpt','—'); setTxt('opVptLbl','Waarde per transactie'); document.getElementById('opVptDelta').innerHTML=`<span class="badge b-gray">wacht op omzet + transacties</span>`; }
+  // gem. parkeerduur (laatste beschikbare week)
+  const du=(OPER.gem_parkeerduur&&OPER.gem_parkeerduur[Y])||(OPER.gem_parkeerduur&&OPER.gem_parkeerduur[Y-1]);
+  if(du){ const ws=Object.keys(du).map(Number).sort((a,b)=>a-b); const lw=ws[ws.length-1]; setTxt('opDuur', du[lw].toFixed(2).replace('.',',')+' u'); setTxt('opDuurSub', `kortparkeren · laatste week (wk ${lw})`); }
+  else { setTxt('opDuur','—'); }
+  // abonnementen
+  if(SUBS && SUBS.length){ const tot=SUBS.reduce((s,x)=>s+(+x.qty||0),0); setTxt('opAbo', tot.toLocaleString('nl-NL')); setTxt('opAboSub', `${SUBS.length} soorten · grootste: Kantoor`); setTxt('operPeil', `· peilweek ${SUBS[0].asof_year}-w${SUBS[0].asof_week}`); }
+  else { setTxt('opAbo','—'); }
+}
+function renderTxChart(){
+  const cv=document.getElementById('txChart'); if(!cv||!OPER) return;
+  if(txChart) txChart.destroy();
+  const M=OPER.kortparkeerhandelingen||{};
+  const years=Object.keys(M).map(Number).sort((a,b)=>a-b);
+  if(_txYears===null) _txYears=new Set(years);
+  const pick=document.getElementById('txYearPick');
+  if(pick){
+    pick.innerHTML='<span style="font-size:11px;color:var(--text2);font-weight:600">Jaren:</span>'+years.map(y=>`<button class="chip${_txYears.has(y)?' active':''}" data-ty="${y}" style="padding:3px 10px;font-size:11px">${y}</button>`).join('');
+    pick.querySelectorAll('button[data-ty]').forEach(b=>b.onclick=()=>{const y=+b.dataset.ty; _txYears.has(y)?_txYears.delete(y):_txYears.add(y); renderTxChart();});
+  }
+  let maxW=0; years.forEach(y=>Object.keys(M[y]).forEach(w=>{if(+w>maxW)maxW=+w;}));
+  if(maxW<1)maxW=1;
+  const labels=[]; for(let w=1;w<=maxW;w++) labels.push('w'+w);
+  const palArr=[ORANGE,BLUE,AMBER,GREEN,'#7C3AED','#0891B2','#DB2777'];
+  const dss=years.filter(y=>_txYears.has(y)).map(y=>{
+    const o=M[y], data=[]; for(let w=1;w<=maxW;w++) data.push(o[w]!=null?o[w]:null);
+    const col=palArr[years.indexOf(y)%palArr.length];
+    return {label:String(y),data,borderColor:col,backgroundColor:'transparent',borderWidth:2,tension:.3,pointRadius:2,spanGaps:false};
+  });
+  txChart=new Chart(cv,{type:'line',data:{labels,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':c.raw.toLocaleString('nl-NL'))+' transacties'}}},scales:{x:gridOpt,y:{...gridOpt,beginAtZero:true,ticks:{...gridOpt.ticks,callback:v=>v.toLocaleString('nl-NL')}}}}});
+}
+
 function renderAsset(){
   // Als de asset-data nog niet geladen is (bijv. na herladen met actieve sessie), laad alsnog
   if(state.fundId && Object.keys(tariffCache).length===0 && !_tariffLoading){
@@ -713,6 +814,10 @@ function renderAsset(){
   if(state.fundId && !_omzetLoaded && !_omzetLoading){
     _omzetLoading=true;
     loadOmzetActuals().finally(()=>{_omzetLoaded=true;_omzetLoading=false;renderAsset();});
+  }
+  if(state.fundId && !_operLoaded && !_operLoading){
+    _operLoading=true;
+    loadOperational().finally(()=>{_operLoaded=true;_operLoading=false;updateOperationalKpis();renderTxChart();});
   }
   renderYtdYearPick();
   // Ververs altijd de KPI's, statische info, financials, rent roll en tarieven
@@ -757,6 +862,7 @@ function renderAsset(){
     cfg={type:'line',data:{labels:MAAND,datasets:dss},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':fmtEUR(c.raw))}}},scales:periodYScale()},plugins:[drempelPlugin]};
   }
   assetChart=new Chart(ctx,cfg);
+  renderTxChart();
 }
 function wrapCfg(labels,ds,yScale,onClick){return {type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,onClick:(e,el)=>{if(el.length&&onClick)onClick(el[0].index);},plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.raw==null?'—':fmtEUR(c.raw))}}},scales:yScale}};}
 function deltaBadge(num,den,label){if(!den)return `<span class="badge b-gray">vs ${label}</span> n.v.t.`;const d=(num/den-1)*100;return `<span class="badge ${d>=0?'b-green':'b-red'}">${pct(d)}</span> vs ${label}`;}
@@ -781,6 +887,7 @@ function updateAssetKpis(){
   loadAssetViewKpis();
   renderPnlTable('asset');
   renderReserves();
+  updateOperationalKpis();
 }
 
 // ---- Parkeertarieven: tabel (ruwe waarde) + verloopgrafiek (uurtarief) ----
@@ -1462,22 +1569,30 @@ function parseQpark(raw){
   const a1=String((raw[0]&&raw[0][0])||'');
   // --- OMZET (kwartaalrapport): blok per "Boekjaar YYYY", regel "Totaal Parkeeromzet" ---
   if(/omzetoverzicht/i.test(a1)){
-    const out=[]; let year=null, inB=false;
+    const out=[]; let year=null, inB=false, kortRow=null, totRow=null;
+    const num=v=>{ if(v===''||v==null) return null; const n=typeof v==='number'?v:parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; };
+    const flush=()=>{
+      if(year && totRow){
+        for(let mi=0;mi<12;mi++){
+          const tv=num(totRow[1+mi]);
+          if(!(tv>0)) continue;            // sla lege/toekomstige maanden over
+          const last=new Date(year,mi+1,0).getDate();
+          const rec={period_date:`${year}-${String(mi+1).padStart(2,'0')}-${String(last).padStart(2,'0')}`, value:Math.round(tv*100)/100};
+          const kv=kortRow?num(kortRow[1+mi]):null;
+          if(kv>0) rec.kort=Math.round(kv*100)/100;
+          out.push(rec);
+        }
+      }
+      kortRow=null; totRow=null;
+    };
     for(const r of raw){
       const a=String((r&&r[0])||'').trim();
       const ym=a.match(/^Boekjaar\s+(\d{4})/);
-      if(ym){ year=+ym[1]; inB=true; continue; }
-      if(inB && /^Totaal\s+Parkeeromzet/i.test(a) && year){
-        for(let mi=0;mi<12;mi++){
-          let v=r[1+mi];
-          if(v===''||v==null) continue;
-          const num=typeof v==='number'?v:parseFloat(String(v).replace(/[^0-9.\-]/g,''));
-          if(!(num>0)) continue;            // sla lege/toekomstige maanden over
-          const last=new Date(year,mi+1,0).getDate();
-          out.push({period_date:`${year}-${String(mi+1).padStart(2,'0')}-${String(last).padStart(2,'0')}`, value:Math.round(num*100)/100});
-        }
-      }
+      if(ym){ flush(); year=+ym[1]; inB=true; continue; }
+      if(inB && /^Omzet\s+Kortparkeren/i.test(a)) kortRow=r;
+      if(inB && /^Totaal\s+Parkeeromzet/i.test(a)) totRow=r;
     }
+    flush();
     out.sort((a,b)=>a.period_date<b.period_date?-1:1);
     return out.length?{kind:'omzet', rows:out}:null;
   }
