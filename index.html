@@ -250,7 +250,11 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 <div class="tab-panel" data-panel="portefeuille">
  <div class="asset-top">
   <div class="section-label">Portefeuille · <span id="portCount" class="mono"></span></div>
-  <div class="chips" id="portChips" style="margin-bottom:0"></div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+   <div class="chips" id="portChips" style="margin-bottom:0"></div>
+   <span style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Prognose op basis van</span>
+   <select id="portScenSel" class="ctrl-select" style="font-size:12px"></select>
+  </div>
  </div>
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label">Portefeuillewaarde (taxatie)</div><div class="kpi-val sm" id="pfWaarde">&mdash;</div><div class="kpi-sub" id="pfWaardeSub"></div></div>
@@ -267,7 +271,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="section-label mt12">Huurinkomsten</div>
  <div class="grid2">
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
-  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle" id="pfCompSub">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
  </div>
  <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI
   <select id="pfPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
@@ -1263,10 +1267,10 @@ async function renderPnlTable(prefix){
 }
 
 const _reserveCharts={};
-async function renderReserves(oId,mId){
+async function renderReserves(oId,mId,scenOverride){
   oId=oId||'onderhoudChart';mId=mId||'marketingChart';
   if(!state.fundId)return;
-  const scen=await getScenarioId();
+  const scen=scenOverride||await getScenarioId();
   const sal=await sbGet(`kpi_values?select=kpi_id,value,period_date&kpi_id=in.(0000aaaa-0000-0000-0000-000000000002,0000aaaa-0000-0000-0000-000000000003)&scenario=eq.actuals&order=period_date.desc`);
   let resOnd=null,resMkt=null;
   if(sal){const o=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000002');const m=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000003');if(o)resOnd=Number(o.value);if(m)resMkt=Number(m.value);}
@@ -1286,7 +1290,19 @@ async function renderReserves(oId,mId){
 
 async function loadPortViewKpis(){
   if(!state.fundId)return;
-  const scen=await getScenarioId();
+  const scen=await getPortScenId();
+  // scenario-selector vullen + label bijwerken
+  const scens=await loadScenarios();
+  const psel=document.getElementById('portScenSel');
+  if(psel){
+    if(!psel.options.length && scens.length){
+      psel.innerHTML=scens.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      psel.value=scen||scens[0].id;
+      psel.onchange=()=>{ _portScen=psel.value; loadPortViewKpis(); renderReserves('pfOnderhoudChart','pfMarketingChart',_portScen); };
+    } else if(scen){ psel.value=scen; }
+  }
+  const scNm=(scens.find(s=>s.id===scen)||{}).name;
+  setTxt('pfCompSub', `Prognose ${new Date().getFullYear()} · ${scNm||'Business Plan'}`);
   const tre=await sbGet(`v_turnover_rent_expectation?select=huur_omzet_ratio,verwachte_omzethuur,verwachte_totale_huur`);
   if(tre&&tre.length){const t=tre[0];
     setTxt('rrRatio_sjp',(t.huur_omzet_ratio*100).toFixed(1).replace('.',',')+'%');
@@ -1349,7 +1365,7 @@ function renderPnl(){const sel=selList();const C={fixed:0,turn:0,gri:0,opex:{},o
 function renderRentRoll(){const sel=selList();let tF=0,tT=0,tS=0,wW=0,tV=0;let r=sel.map(a=>{tF+=a.fixed;tT+=a.turn;tS+=a.spaces;wW+=a.walt*a.fv;tV+=a.fv;return `<tr><td style="font-family:'DM Sans'">${a.name}${a.concept?' (concept)':''}</td><td style="font-family:'DM Sans'">${a.tenant}</td><td class="tr-right">${a.spaces}</td><td class="tr-right" id="rrFixed_${a.id}">${fmtEUR(a.fixed)}</td><td class="tr-right" id="rrTurn_${a.id}">${fmtEUR(a.turn)}</td><td style="font-family:'DM Sans'">${a.index}</td><td>${a.expiry}</td><td class="tr-right">${a.walt.toFixed(1)} jr</td><td class="tr-right" id="rrRatio_${a.id}">&mdash;</td></tr>`;}).join('');r+=`<tr class="total"><td>Totaal (${sel.length})</td><td></td><td class="tr-right">${tS}</td><td class="tr-right" id="rrTotFixed">${fmtEUR(tF)}</td><td class="tr-right" id="rrTotTurn">${fmtEUR(tT)}</td><td>—</td><td>—</td><td class="tr-right">${tV?(wW/tV).toFixed(1):'0'} jr</td><td class="tr-right">&mdash;</td></tr>`;document.getElementById('rrBody').innerHTML=r;}
 
 function portAgg(){const sel=selList();const fv=sel.reduce((s,a)=>s+a.fv,0),fixed=sel.reduce((s,a)=>s+a.fixed,0),turn=sel.reduce((s,a)=>s+a.turn,0),spaces=sel.reduce((s,a)=>s+a.spaces,0),gross=fixed+turn,nri=gross*NRI_FACTOR;const occ=spaces?sel.reduce((s,a)=>s+a.occ*a.spaces,0)/spaces:0;const walt=fv?sel.reduce((s,a)=>s+a.walt*a.fv,0)/fv:0;return {sel,fv,fixed,turn,gross,nri,spaces,occ,walt,bar:gross/fv,nar:nri/fv};}
-function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML='<tr><td colspan="2" style="color:var(--text2)">Laden&hellip;</td></tr>';document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderPnlTable('pf');loadPortViewKpis();renderReserves('pfOnderhoudChart','pfMarketingChart');if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
+function renderPortfolio(){const a=portAgg();document.getElementById('portCount').textContent=`${a.sel.length} van ${ASSETS.length} assets`;document.getElementById('pfWaarde').textContent=fmtEUR(a.fv);document.getElementById('pfWaardeSub').textContent=`${a.sel.length} object(en) · ${a.spaces} plaatsen`;document.getElementById('pfBarNar').textContent=`${(a.bar*100).toFixed(2)}% / ${(a.nar*100).toFixed(2)}%`;document.getElementById('pfBezet').textContent=(a.occ*100).toFixed(0)+'%';document.getElementById('pfWalt').textContent=a.walt.toFixed(1)+' jaar';document.getElementById('pfTbody').innerHTML='<tr><td colspan="2" style="color:var(--text2)">Laden&hellip;</td></tr>';document.getElementById('huurSub').textContent=`${a.sel.length} asset(s) · totaal GRI ${fmtEUR(a.gross)}`;renderRentRoll();renderPnlTable('pf');loadPortViewKpis();renderReserves('pfOnderhoudChart','pfMarketingChart',_portScen);if(huurChart)huurChart.destroy();huurChart=new Chart(document.getElementById('huurChart'),{type:'bar',data:{labels:a.sel.map(x=>x.name),datasets:[{label:'Vaste huur',data:a.sel.map(x=>x.fixed),backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'},{label:'Variabele huur',data:a.sel.map(x=>x.turn),backgroundColor:AMBER+'aa',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});}
 
 function renderChips(){
   // PORTFOLIO: multi-select (assets aan/uit voor consolidatie)
@@ -1994,6 +2010,9 @@ async function getScenarioId(){
   const bp=rows.find(r=>/business plan/i.test(r.name))||rows[0];
   _scenId=bp.id; return _scenId;
 }
+// Scenario voor de geconsolideerde prognose op de portefeuille-tab (default: business plan)
+let _portScen=null;
+async function getPortScenId(){ return _portScen || await getScenarioId(); }
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 function deltaPpt(d){if(d==null)return '';const v=d*100;const s=v>=0?'+':'';const cls=v>=0?'b-green':'b-red';return `<span class="badge ${cls}">${s}${v.toFixed(2).replace('.',',')} ppt vs vorig kw.</span>`;}
 function nlMonthLabel(ds){if(!ds)return '';const p=ds.split('-');return (MAAND[+p[1]-1]||'')+' '+p[0];}
