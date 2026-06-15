@@ -1155,15 +1155,24 @@ async function loadScenarios(){
   });
   return _scenList;
 }
-// Vul/ververs de fondsjaar-dropdown voor het gekozen scenario; behoudt geldige selectie
+// Vul/ververs de jaar-dropdown (kalenderjaar) voor het gekozen scenario; behoudt geldige selectie
 const _fyScen={};
 async function ensureFyOptions(key, sel, scenId){
   if(_fyScen[key]===scenId && sel.options.length) return;
-  const fys=await sbGet(`v_pnl_to_nri?select=fund_year&scenario_id=eq.${scenId}&period_type=eq.fy&order=fund_year.asc`);
-  const uniq=[...new Set((fys||[]).map(r=>r.fund_year))];
+  const fys=await sbGet(`v_pnl_to_nri?select=fund_year,period_end&scenario_id=eq.${scenId}&period_type=eq.fy&order=fund_year.asc`);
+  // uniek per fund_year, met bijhorend kalenderjaar uit period_end
+  const seen={}; const list=[];
+  (fys||[]).forEach(r=>{if(seen[r.fund_year])return;seen[r.fund_year]=1;list.push({fy:r.fund_year,year:+(r.period_end||'').slice(0,4)});});
+  // stubjaren = eerste en laatste fondsjaar (gebroken hold-periode)
   const prev=+sel.value;
-  sel.innerHTML=uniq.map(fy=>`<option value="${fy}">Fondsjaar ${fy}</option>`).join('');
-  sel.value=uniq.includes(prev)?prev:(uniq[0]||1);
+  sel.innerHTML=list.map((o,i)=>{
+    const stub=(i===0||i===list.length-1)?' (deel)':'';
+    return `<option value="${o.fy}">${o.year||('FJ'+o.fy)}${stub}</option>`;
+  }).join('');
+  // standaard: huidig kalenderjaar indien aanwezig, anders eerste volledige jaar
+  const curYear=new Date().getFullYear();
+  let def=list.find(o=>o.year===curYear)?.fy ?? (list[1]?.fy || list[0]?.fy || 1);
+  sel.value=list.some(o=>o.fy===prev)?prev:def;
   _fyScen[key]=scenId;
 }
 const _pnlInit={};
@@ -1198,8 +1207,10 @@ async function renderPnlTable(prefix){
   const fyA=+selA.value||1,fyB=+selB.value||1;
   const nmA=scenA?scenA.options[scenA.selectedIndex].text:'';
   const nmB=scenB?scenB.options[scenB.selectedIndex].text:'';
-  setTxt(prefix+'PnlColA',(nmA?nmA+' · ':'')+'FJ '+fyA);
-  setTxt(prefix+'PnlColB',(nmB?nmB+' · ':'')+'FJ '+fyB);
+  const yrA=selA.options[selA.selectedIndex]?.text||('FJ '+fyA);
+  const yrB=selB.options[selB.selectedIndex]?.text||('FJ '+fyB);
+  setTxt(prefix+'PnlColA',(nmA?nmA+' · ':'')+yrA);
+  setTxt(prefix+'PnlColB',(nmB?nmB+' · ':'')+yrB);
 
   const sel='sort_order,label,level,signed_amount';
   const [rowsA,rowsB]=await Promise.all([
@@ -1229,8 +1240,8 @@ async function renderReserves(oId,mId){
   if(sal){const o=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000002');const m=sal.find(r=>r.kpi_id==='0000aaaa-0000-0000-0000-000000000003');if(o)resOnd=Number(o.value);if(m)resMkt=Number(m.value);}
   let fyLabels=[],ondData=[];
   if(scen){
-    const rows=await sbGet(`v_pnl_to_nri?select=fund_year,amount&scenario_id=eq.${scen}&period_type=eq.fy&label=eq.Onderhoud&order=fund_year.asc`);
-    if(rows&&rows.length){fyLabels=rows.map(r=>'FY'+r.fund_year);ondData=rows.map(r=>Math.abs(Number(r.amount)));}
+    const rows=await sbGet(`v_pnl_to_nri?select=fund_year,period_end,amount&scenario_id=eq.${scen}&period_type=eq.fy&label=eq.Onderhoud&order=fund_year.asc`);
+    if(rows&&rows.length){fyLabels=rows.map(r=>(r.period_end||'').slice(0,4)||('FY'+r.fund_year));ondData=rows.map(r=>Math.abs(Number(r.amount)));}
   }
   const resLine=(val,lbl)=>({id:'resLine_'+lbl,afterDatasetsDraw(chart){if(val==null)return;const{ctx,chartArea:{left,right,top,bottom},scales:{y}}=chart;const yp=y.getPixelForValue(val);if(yp<top||yp>bottom)return;ctx.save();ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeStyle=GREEN;ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=GREEN;ctx.font='600 10px "DM Sans"';ctx.textAlign='left';ctx.fillText(lbl+' · '+fmtK(val),left+4,yp-4);ctx.restore();}});
   if(_reserveCharts[oId])_reserveCharts[oId].destroy();
@@ -1254,12 +1265,13 @@ async function loadPortViewKpis(){
   if(!scen)return;
   const pr=await sbGet(`v_property_returns?select=period_end,nri,direct_yield,direct_yield_delta,period_type,fund_year&scenario_id=eq.${scen}&order=period_end.asc`);
   if(pr&&pr.length){
-    const fy=pr.filter(r=>r.period_type==='fy');const fy1=fy.find(r=>r.fund_year===1)||fy[0];
+    const fy=pr.filter(r=>r.period_type==='fy');const _cy=new Date().getFullYear();const fy1=fy.find(r=>(r.period_end||'').slice(0,4)==String(_cy))||fy.find(r=>r.fund_year===2)||fy[0];
     if(fy1)setTxt('pfNettoHuur',fmtEUR(Math.round(Number(fy1.nri))));
     const q=pr.filter(r=>r.period_type==='quarter');const today=new Date().toISOString().slice(0,10);const past=q.filter(r=>r.period_end<=today);const row=past.length?past[past.length-1]:q[0];
     if(row){setTxt('pfDirect',(row.direct_yield*100).toFixed(2).replace('.',',')+'%');const dd=document.getElementById('pfDirectDelta');if(dd)dd.innerHTML=deltaPpt(row.direct_yield_delta);}
   }
-  const sam=await sbGet(`v_pnl_to_nri?select=label,level,signed_amount,amount&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=eq.1&order=sort_order.asc`);
+  const _cyA=new Date().getFullYear();
+  const sam=await sbGet(`v_pnl_to_nri?select=label,level,signed_amount,amount&scenario_id=eq.${scen}&period_type=eq.fy&period_end=gte.${_cyA}-01-01&period_end=lte.${_cyA}-12-31&order=sort_order.asc`);
   const tb=document.getElementById('pfTbody');
   if(tb&&sam&&sam.length){
     tb.innerHTML=sam.map(r=>{const cls=(r.level==='total'||r.level==='subtotal')?'total':(r.level==='cost'?'sub':'');const neg=Number(r.signed_amount)<0;return `<tr class="${cls}"><td>${r.label}</td><td class="tr-right">${(neg?'− ':'')+fmtEUR(Math.abs(Number(r.amount)))}</td></tr>`;}).join('');
@@ -1339,7 +1351,7 @@ async function renderFinCovenants(){
   const rente=loan?principal*Number(loan.interest_rate):1010000;
   const afl=loan?Number(loan.amort_per_year):400000;
   let nri=null,taxatie=33000000;
-  if(scen){const pr=await sbGet(`v_property_returns?select=nri,fair_value&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=eq.1`);if(pr&&pr.length){nri=Number(pr[0].nri);if(pr[0].fair_value)taxatie=Number(pr[0].fair_value);}}
+  if(scen){const _cy=new Date().getFullYear();const pr=await sbGet(`v_property_returns?select=nri,fair_value&scenario_id=eq.${scen}&period_type=eq.fy&period_end=gte.${_cy}-01-01&period_end=lte.${_cy}-12-31`);if(pr&&pr.length){nri=Number(pr[0].nri);if(pr[0].fair_value)taxatie=Number(pr[0].fair_value);}}
   const ltv=principal/taxatie, icr=nri?nri/rente:null, dscr=nri?nri/(rente+afl):null;
   setTxt('finLTV',(ltv*100).toFixed(1).replace('.',',')+'%');
   if(icr!=null)setTxt('finICR',icr.toFixed(2).replace('.',',')+'×');
