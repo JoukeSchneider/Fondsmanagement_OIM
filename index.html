@@ -394,8 +394,8 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="section-label">Hypotheek &amp; covenanten · BerlinHyp AG</div>
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label">Uitstaande hypotheekschuld</div><div class="kpi-val sm">€ 20.000.000</div><div class="kpi-sub">resterend <span id="hypLooptijd" class="mono">&mdash;</span> · t/m 30-06-2035 · 5,05% vast</div></div>
-  <div class="kpi-card blue"><div class="kpi-label">Loan-to-Value</div><div class="kpi-val sm">60,6%</div><div class="kpi-sub">schuld / taxatiewaarde €33M</div></div>
-  <div class="kpi-card gray"><div class="kpi-label">Interest Coverage (ICR)</div><div class="kpi-val sm">1,93×</div><div class="kpi-sub">NRI / rentelasten</div></div>
+  <div class="kpi-card blue"><div class="kpi-label">Loan-to-Value</div><div class="kpi-val sm" id="finLTV">60,6%</div><div class="kpi-sub">schuld / taxatiewaarde €33M</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Interest Coverage (ICR)</div><div class="kpi-val sm" id="finICR">1,93×</div><div class="kpi-sub">NRI / rentelasten</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Gemiddelde rentevoet</div><div class="kpi-val sm">5,05%</div><div class="kpi-sub">€1,01M rente / €20M</div></div>
  </div>
  <div class="section-label mt12">Kapitaalstructuur (capital stack)</div>
@@ -408,13 +408,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   </div>
  </div>
  <div class="section-label mt12">Covenant-naleving</div>
- <div class="info-card">
-  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">LTV</div><div style="font-size:11px;color:var(--text2)">huidige waarde 60,6%</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
-  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">ICR</div><div style="font-size:11px;color:var(--text2)">huidige waarde 1,93×</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
-  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">DSCR</div><div style="font-size:11px;color:var(--text2)">huidige waarde 1,32×</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
-  <div class="conv-row"><div class="conv-left"><span class="dot"></span><div><div style="font-weight:500">EBITDA</div><div style="font-size:11px;color:var(--text2)">huidige waarde €1,95M</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px">drempel n.t.b.</div><div style="font-size:11px;color:var(--text3)">uit leningsovereenkomst</div></div></div>
-  <div class="note amber mt12">Vaste drempels volgen uit de leningsovereenkomst; de Fonds-tab toont al een vooruitblik met illustratieve drempels.</div>
- </div>
+ <div class="info-card"><div id="covNaleving"></div></div>
 </div>
 
 <!-- PARTICIPANTEN -->
@@ -423,12 +417,12 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label">Actieve participanten</div><div class="kpi-val">108</div><div class="kpi-sub">1.864 participaties à €10.000</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Gem. participaties p.p.</div><div class="kpi-val sm">17,3</div><div class="kpi-sub">spreiding deelnemers</div></div>
-  <div class="kpi-card amber"><div class="kpi-label">Concentratie top-5</div><div class="kpi-val sm">22,4%</div><div class="kpi-sub">aandeel 5 grootste deelnemers</div></div>
-  <div class="kpi-card green"><div class="kpi-label">Brugfinanciering afgelost</div><div class="kpi-val sm">100%</div><div class="kpi-sub">laatste tranche jan 2026</div></div>
+  <div class="kpi-card amber"><div class="kpi-label">Concentratie top-5</div><div class="kpi-val sm">&mdash;</div><div class="kpi-sub">aandeel 5 grootste · wacht op register</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Brugfinanciering afgelost</div><div class="kpi-val sm">100%</div><div class="kpi-sub">13 geconverteerd · laatste tranche jan 2026</div></div>
  </div>
  <div class="section-label mt12">Verdeling</div>
  <div class="grid2">
-  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Participaties per distributiekanaal</div></div></div><div class="chart-wrap sm"><canvas id="kanaalChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Participaties per distributiekanaal</div><div class="chart-subtitle">indicatieve verdeling &middot; wacht op deelnemersregister</div></div></div><div class="chart-wrap sm"><canvas id="kanaalChart"></canvas></div></div>
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Uitkeringen per participatie</div><div class="chart-subtitle">Per kwartaal · concept</div></div></div><div class="chart-wrap sm"><canvas id="uitkeringChart"></canvas></div></div>
  </div>
 </div>
@@ -1170,11 +1164,38 @@ function renderReport(t){document.getElementById('reportAudienceLbl').textConten
 
 function updateCtx(){const t=state.year+' · '+state.period.toUpperCase()+' · '+state.scenario;const ac=document.getElementById('assetCtx');if(ac)ac.textContent=t;document.getElementById('fondsCtx').textContent=t;updateAssetKpis();renderFonds();}
 const HYP_MATURITY=new Date('2035-06-30');
+async function renderFinCovenants(){
+  if(!state.fundId)return;
+  const scen=await getScenarioId();
+  const loans=await sbGet(`loans?select=principal,interest_rate,amort_per_year&fund_id=eq.${state.fundId}`);
+  const covs=await sbGet(`covenants?select=metric,operator,threshold,test_frequency`);
+  const loan=loans&&loans.length?loans[0]:null;
+  const principal=loan?Number(loan.principal):20000000;
+  const rente=loan?principal*Number(loan.interest_rate):1010000;
+  const afl=loan?Number(loan.amort_per_year):400000;
+  let nri=null,taxatie=33000000;
+  if(scen){const pr=await sbGet(`v_property_returns?select=nri,fair_value&scenario_id=eq.${scen}&period_type=eq.fy&fund_year=eq.1`);if(pr&&pr.length){nri=Number(pr[0].nri);if(pr[0].fair_value)taxatie=Number(pr[0].fair_value);}}
+  const ltv=principal/taxatie, icr=nri?nri/rente:null, dscr=nri?nri/(rente+afl):null;
+  setTxt('finLTV',(ltv*100).toFixed(1).replace('.',',')+'%');
+  if(icr!=null)setTxt('finICR',icr.toFixed(2).replace('.',',')+'×');
+  const cont=document.getElementById('covNaleving');if(!cont)return;
+  if(!covs||!covs.length){cont.innerHTML='<div class="note">Geen covenanten gevonden.</div>';return;}
+  const actuals={LTV:ltv,ICR:icr,DSCR:dscr},order={LTV:0,ICR:1,DSCR:2};
+  const sorted=[...covs].sort((a,b)=>(order[a.metric]??9)-(order[b.metric]??9));
+  const f=(x,m)=>m==='LTV'?(x*100).toFixed(1).replace('.',',')+'%':x.toFixed(2).replace('.',',')+'×';
+  cont.innerHTML=sorted.map(c=>{
+    const v=actuals[c.metric];if(v==null)return '';
+    const ok=c.operator==='<='?v<=Number(c.threshold):v>=Number(c.threshold);
+    return `<div class="conv-row"><div class="conv-left"><span class="dot" style="background:${ok?'var(--green)':'var(--red)'}"></span><div><div style="font-weight:500">${c.metric}</div><div style="font-size:11px;color:var(--text2)">huidige waarde ${f(v,c.metric)} · drempel ${c.operator} ${f(Number(c.threshold),c.metric)}</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px;color:${ok?'var(--green)':'var(--red)'}">${ok?'OK':'BREACH'}</div><div style="font-size:11px;color:var(--text3)">test: ${c.test_frequency||'halfjaar'}</div></div></div>`;
+  }).join('')+`<div class="hint mt12">LTV = schuld / taxatiewaarde · ICR = NRI / rentelasten · DSCR = NRI / (rente + aflossing). NRI uit Business Plan (fondsjaar 1); rente € ${(rente/1000).toFixed(0)}k, aflossing € ${(afl/1000).toFixed(0)}k p.j.</div>`;
+}
+
 function renderFinanciering(){
   const now=new Date();
   const jr=(HYP_MATURITY-now)/(1000*60*60*24*365.25);
   const lt=document.getElementById('hypLooptijd');
   if(lt) lt.textContent=jr.toFixed(1).replace('.',',')+' jr';
+  renderFinCovenants();
   const equity=Math.round(9961.84*1864), debt=20000000, tot=equity+debt, taxatie=33000000;
   const pct1=n=>(n/tot*100).toFixed(1).replace('.',',')+'%';
   const mln=n=>(n/1e6).toFixed(1).replace('.',',');
