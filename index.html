@@ -226,12 +226,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="kpi-card gray"><div class="kpi-label">Direct rendement</div><div class="kpi-val sm" id="fdDirect">&mdash;</div><div class="kpi-sub" id="fdDirectDelta"></div></div>
   <div class="kpi-card gray"><div class="kpi-label">Uitkering p.p. (Q1-2026)</div><div class="kpi-val sm">€ 125</div><div class="kpi-sub">&asymp; 5,0% direct rendement p.j.</div></div>
  </div>
- <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI
+ <div class="section-label mt12" style="font-size:9px;letter-spacing:.03em">Geconsolideerde financiële resultaten
   <select id="fdPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="fdPnlFyA" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="fdPnlPerA" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
   <span style="color:var(--text2);font-size:12px;margin:0 6px">vs</span>
   <select id="fdPnlScenB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="fdPnlFyB" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="fdPnlPerB" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
@@ -285,12 +287,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Huur per asset: vast vs. variabel</div><div class="chart-subtitle" id="huurSub"></div></div></div><div class="chart-wrap"><canvas id="huurChart"></canvas></div></div>
   <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Geconsolideerde samenstelling</div><div class="chart-subtitle" id="pfCompSub">Prognose lopend jaar</div></div></div><table class="data-table"><thead><tr><th>Component</th><th class="tr-right">Bedrag</th></tr></thead><tbody id="pfTbody"></tbody></table></div>
  </div>
- <div class="section-label mt12">Geconsolideerde financiële resultaten &middot; resultatenrekening tot NRI
+ <div class="section-label mt12" style="font-size:9px;letter-spacing:.03em">Geconsolideerde financiële resultaten
   <select id="pfPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="pfPnlFyA" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="pfPnlPerA" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
   <span style="color:var(--text2);font-size:12px;margin:0 6px">vs</span>
   <select id="pfPnlScenB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="pfPnlFyB" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="pfPnlPerB" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
@@ -364,12 +368,14 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  </div>
 
  <!-- FINANCIËLE RESULTATEN · RESULTATENREKENING TOT NRI (Argus, vergelijking) -->
- <div class="section-label mt12">Financiële resultaten &middot; resultatenrekening tot NRI
+ <div class="section-label mt12" style="font-size:9px;letter-spacing:.03em">Financiële resultaten
   <select id="assetPnlScenA" style="margin-left:8px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="assetPnlFyA" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="assetPnlPerA" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
   <span style="color:var(--text2);font-size:12px;margin:0 6px">vs</span>
   <select id="assetPnlScenB" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
   <select id="assetPnlFyB" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"></select>
+  <select id="assetPnlPerB" title="Periode" style="margin-left:4px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:#fff"><option value="fy">Volledig jaar</option><option value="q1">YTD Q1</option><option value="q2">YTD Q2</option><option value="q3">YTD Q3</option></select>
  </div>
  <div class="info-card" style="overflow-x:auto">
   <table class="data-table">
@@ -513,7 +519,10 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="upload-card" id="zone-exact">
    <div class="uz-icon">📊</div>
    <div class="uz-title">Exact Online export</div>
-   <div class="uz-sub">administratie · grootboek · .xlsx of .csv</div>
+   <div class="uz-sub">proef- &amp; saldibalans · grootboekstanden · .xlsx</div>
+   <div style="margin:4px 0;width:100%">
+    <input type="text" id="exact-label" class="ctrl-select" style="font-size:12px;width:100%;box-sizing:border-box" placeholder="Label, bijv. 2025 Actuals">
+   </div>
    <div class="uz-filename" id="file-exact-name"></div>
    <div class="uz-actions">
     <label class="btn primary" for="file-exact">Bestand kiezen</label>
@@ -1207,6 +1216,16 @@ async function loadScenarios(){
 const _fyScen={};
 async function ensureFyOptions(key, sel, scenId){
   if(_fyScen[key]===scenId && sel.options.length) return;
+  if(typeof scenId==='string' && scenId.startsWith('act:')){
+    const series=encodeURIComponent(scenId.slice(4));
+    const rows=await sbGet(`v_actuals_pnl_to_nri?select=fund_year,peildatum&series=eq.${series}&order=fund_year.asc`);
+    const seen={}; const list=[];
+    (rows||[]).forEach(r=>{ if(seen[r.fund_year])return; seen[r.fund_year]=1; list.push({fy:r.fund_year,year:+(r.peildatum||'').slice(0,4)}); });
+    const prev=+sel.value;
+    sel.innerHTML=list.map(o=>`<option value="${o.fy}">${o.year||('FJ'+o.fy)}</option>`).join('');
+    sel.value=list.some(o=>o.fy===prev)?prev:(list[list.length-1]?.fy||1);
+    _fyScen[key]=scenId; return;
+  }
   const fys=await sbGet(`v_pnl_to_nri?select=fund_year,period_end&scenario_id=eq.${scenId}&period_type=eq.fy&order=fund_year.asc`);
   // uniek per fund_year, met bijhorend kalenderjaar uit period_end
   const seen={}; const list=[];
@@ -1223,6 +1242,48 @@ async function ensureFyOptions(key, sel, scenId){
   sel.value=list.some(o=>o.fy===prev)?prev:def;
   _fyScen[key]=scenId;
 }
+let _actSeries=null;
+async function loadActualsSeries(){
+  if(_actSeries)return _actSeries;
+  if(!state.fundId)return [];
+  const rows=await sbGet(`v_actuals_pnl_to_nri?select=series&fund_id=eq.${state.fundId}`);
+  const seen={}; const out=[];
+  (rows||[]).forEach(r=>{ if(r.series&&!seen[r.series]){ seen[r.series]=1; out.push(r.series); } });
+  _actSeries=out; return out;
+}
+// Haalt één P&L-kolom op. scenId met prefix 'act:' = Actuals-serie uit v_actuals_pnl_to_nri,
+// anders een Argus-scenario uit de meegegeven view. Cap op NRI als de view bij NRI stopt.
+async function pnlFetchSide(scenId, fy, view, period){
+  const sel='sort_order,label,level,signed_amount';
+  if(typeof scenId==='string' && scenId.startsWith('act:')){
+    const series=encodeURIComponent(scenId.slice(4));
+    const cap=(view==='v_fund_pnl')?'':'&sort_order=lte.10';
+    const rows=await sbGet(`v_actuals_pnl_to_nri?select=${sel},peildatum&series=eq.${series}&period_type=eq.ytd&fund_year=eq.${fy}&order=peildatum.asc,sort_order.asc${cap}`);
+    if(!rows||!rows.length)return [];
+    const peils=[...new Set(rows.map(r=>r.peildatum))];
+    const tq=(period&&period!=='fy')?+period.slice(1):4;   // Volledig jaar = jaareinde (Q4)
+    const target=peils.find(p=>{const mo=+String(p).slice(5,7);return Math.floor((mo-1)/3)+1===tq;});
+    if(!target)return [];   // geen saldibalans voor dit kwartaal -> kolom toont —
+    return rows.filter(r=>r.peildatum===target).map(r=>({sort_order:r.sort_order,label:r.label,level:r.level,signed_amount:r.signed_amount}));
+  }
+  if(period && period!=='fy'){
+    const n=+period.slice(1);  // 'q2' -> 2 (kalenderkwartaal)
+    const rows=await sbGet(`${view}?select=${sel},period_end&scenario_id=eq.${scenId}&period_type=eq.quarter&fund_year=eq.${fy}&order=period_end.asc`);
+    if(!rows)return null;
+    const acc={};
+    rows.forEach(r=>{
+      const mo=+(r.period_end||'').slice(5,7); const q=Math.floor((mo-1)/3)+1;
+      if(q>n)return;
+      const k=r.sort_order;
+      if(!acc[k])acc[k]={sort_order:r.sort_order,label:r.label,level:r.level,signed_amount:0,_null:true};
+      if(r.signed_amount!=null){ acc[k].signed_amount+=Number(r.signed_amount); acc[k]._null=false; }
+    });
+    return Object.values(acc)
+      .map(o=>({sort_order:o.sort_order,label:o.label,level:o.level,signed_amount:o._null?null:o.signed_amount}))
+      .sort((a,b)=>a.sort_order-b.sort_order);
+  }
+  return await sbGet(`${view}?select=${sel}&scenario_id=eq.${scenId}&period_type=eq.fy&fund_year=eq.${fy}&order=sort_order.asc`);
+}
 const _pnlInit={};
 async function renderPnlTable(prefix, view){
   view=view||'v_pnl_to_nri';
@@ -1235,7 +1296,10 @@ async function renderPnlTable(prefix, view){
 
   if(!_pnlInit[prefix]){
     if(scenA&&scenB){
-      const opts=scens.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const sOpts=scens.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const actSeries=await loadActualsSeries();
+      const aOpts=actSeries.map(s=>`<option value="act:${s}">${s}</option>`).join('');
+      const opts=sOpts+aOpts;
       scenA.innerHTML=opts;scenB.innerHTML=opts;
       const bp=scens[0]; // na sort: Business Plan IM (of oudste)
       const other=scens.find(s=>s.id!==bp.id)||bp;
@@ -1245,6 +1309,9 @@ async function renderPnlTable(prefix, view){
     }
     selA.onchange=()=>renderPnlTable(prefix,view);
     selB.onchange=()=>renderPnlTable(prefix,view);
+    const perA0=document.getElementById(prefix+'PnlPerA'),perB0=document.getElementById(prefix+'PnlPerB');
+    if(perA0)perA0.onchange=()=>renderPnlTable(prefix,view);
+    if(perB0)perB0.onchange=()=>renderPnlTable(prefix,view);
     _pnlInit[prefix]=true;
   }
 
@@ -1254,17 +1321,22 @@ async function renderPnlTable(prefix, view){
   await ensureFyOptions(prefix+'B',selB,scenIdB);
 
   const fyA=+selA.value||1,fyB=+selB.value||1;
+  const perA=document.getElementById(prefix+'PnlPerA'),perB=document.getElementById(prefix+'PnlPerB');
+  if(perA)perA.style.display='';
+  if(perB)perB.style.display='';
+  const perModeA=perA?perA.value:'fy';
+  const perModeB=perB?perB.value:'fy';
+  const perTxt=m=>m==='fy'?'':' · '+({q1:'YTD Q1',q2:'YTD Q2',q3:'YTD Q3'}[m]||'');
   const nmA=scenA?scenA.options[scenA.selectedIndex].text:'';
   const nmB=scenB?scenB.options[scenB.selectedIndex].text:'';
   const yrA=selA.options[selA.selectedIndex]?.text||('FJ '+fyA);
   const yrB=selB.options[selB.selectedIndex]?.text||('FJ '+fyB);
-  setTxt(prefix+'PnlColA',(nmA?nmA+' · ':'')+yrA);
-  setTxt(prefix+'PnlColB',(nmB?nmB+' · ':'')+yrB);
+  setTxt(prefix+'PnlColA',(nmA?nmA+' · ':'')+yrA+perTxt(perModeA));
+  setTxt(prefix+'PnlColB',(nmB?nmB+' · ':'')+yrB+perTxt(perModeB));
 
-  const sel='sort_order,label,level,signed_amount';
   const [rowsA,rowsB]=await Promise.all([
-    sbGet(`${view}?select=${sel}&scenario_id=eq.${scenIdA}&period_type=eq.fy&fund_year=eq.${fyA}&order=sort_order.asc`),
-    sbGet(`${view}?select=${sel}&scenario_id=eq.${scenIdB}&period_type=eq.fy&fund_year=eq.${fyB}&order=sort_order.asc`)
+    pnlFetchSide(scenIdA,fyA,view,perModeA),
+    pnlFetchSide(scenIdB,fyB,view,perModeB)
   ]);
   if((!rowsA||!rowsA.length)&&(!rowsB||!rowsB.length)){body.innerHTML='<tr><td colspan="5" style="color:var(--text2)">Geen data</td></tr>';return;}
   const map={};
@@ -1276,10 +1348,14 @@ async function renderPnlTable(prefix, view){
     if(m.level==='header'){
       return `<tr><td colspan="5" style="padding:12px 10px 4px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">${m.label}</td></tr>`;
     }
-    const va=m.a==null?0:m.a,vb=m.b==null?0:m.b,d=va-vb,dp=vb?((va/vb-1)*100):null;
+    const has=(m.a!=null&&m.b!=null);
+    const va=m.a==null?0:m.a,vb=m.b==null?0:m.b,d=va-vb,dp=(has&&vb)?((va/vb-1)*100):null;
     const dCls=d>=0?'b-green':'b-red';
     const cls=(m.level==='total'||m.level==='subtotal')?'total':(m.level==='cost'?'sub':'');
-    return `<tr class="${cls}"><td>${m.label}</td><td class="tr-right">${fmtEUR(va)}</td><td class="tr-right">${fmtEUR(vb)}</td><td class="tr-right">${d>=0?'+':'−'}${fmtEUR(Math.abs(d))}</td><td class="tr-right">${dp==null?'—':`<span class="badge ${dCls}">${pct(dp)}</span>`}</td></tr>`;
+    const aTxt=m.a==null?'—':fmtEUR(va), bTxt=m.b==null?'—':fmtEUR(vb);
+    const dTxt=has?`${d>=0?'+':'−'}${fmtEUR(Math.abs(d))}`:'—';
+    const pTxt=(has&&dp!=null)?`<span class="badge ${dCls}">${pct(dp)}</span>`:'—';
+    return `<tr class="${cls}"><td>${m.label}</td><td class="tr-right">${aTxt}</td><td class="tr-right">${bTxt}</td><td class="tr-right">${dTxt}</td><td class="tr-right">${pTxt}</td></tr>`;
   }).join('');
 }
 
@@ -1721,6 +1797,13 @@ function parseFile(file, type) {
         return;
       }
       imp.qpark=null;
+      if(type==='exact'){
+        const ex = parseExactSaldibalans(imp.rawRows);
+        if(ex.recs.length){ imp.exact=ex; showExactPreview(ex, file.name); }
+        else { imp.exact=null; showPreviewError('Geen grootboekregels herkend. Verwacht een Exact "Balans / Winst- en verliesrekening", type Proef- & saldibalans, niveau Uitgebreid.'); }
+        return;
+      }
+      imp.exact=null;
       showPreview(type, file.name, filtered);
     } catch(err) {
       showPreviewError('Kon bestand niet lezen: ' + err.message);
@@ -1835,6 +1918,67 @@ async function uploadQpark(){
   return q.kind==='omzet' ? (j.omzet_rows||0) : ((j.weekly_rows||0)+(j.sub_rows||0));
 }
 
+// ===== Exact Online 'Proef- & saldibalans' parser (ingesprongen verslag -> platte regels) =====
+function parseExactSaldibalans(rows) {
+  const ACCT = /^\s*(\d{3,5})\s*-\s*(.+?)\s*$/;
+  const num = x => {
+    if (typeof x === 'number') return x;
+    if (x == null || x === '') return 0;
+    const s = String(x).replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+    const v = parseFloat(s); return isNaN(v) ? 0 : v;
+  };
+  let boekjaar = null, endMonth = 12;
+  rows.forEach(r => (r||[]).forEach((c,i) => {
+    const v = String(c==null?'':c).trim();
+    if (v === 'Boekjaar' && r[i+1]) boekjaar = parseInt(r[i+1],10) || boekjaar;
+    if (v === 'Periode'  && r[i+1]) { const m = String(r[i+1]).match(/(\d+)\s*$/); if(m) endMonth = parseInt(m[1],10); }
+  }));
+  if (!boekjaar) boekjaar = new Date().getFullYear() - 1;
+  const last = new Date(boekjaar, endMonth, 0);
+  const peildatum = `${boekjaar}-${String(endMonth).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
+
+  let stack = [], statement = null, started = false; const recs = [];
+  for (const r of rows) {
+    const a = String((r&&r[0])==null?'':r[0]).trim();
+    const pd = num(r&&r[1]), pc = num(r&&r[2]), ed = num(r&&r[3]), ec = num(r&&r[4]);
+    if (a.startsWith('Intangible fixed assets') && !started) { started = true; statement = 'balans'; }
+    if (!started) continue;
+    if (a === 'Income') { statement = 'wv'; stack = []; }
+    if (!a) continue;
+    if (a.startsWith('Totaal')) {
+      const name = a.includes(':') ? a.split(':').slice(1).join(':').trim() : '';
+      for (let j = stack.length-1; j >= 0; j--) { if (stack[j] === name) { stack = stack.slice(0,j); break; } }
+      continue;
+    }
+    const m = a.match(ACCT);
+    if (m) recs.push({ statement, rekening:m[1], omschrijving:m[2].trim(), rubriek_path: stack.join(' / '), pd, pc, ed, ec });
+    else if (pd===0 && pc===0 && ed===0 && ec===0) stack.push(a);
+  }
+  const bal = recs.filter(r => r.statement==='balans'), wv = recs.filter(r => r.statement==='wv');
+  const round2 = n => Math.round(n*100)/100;
+  const balansverschil = round2(bal.reduce((s,r)=>s+r.ed-r.ec,0));
+  const wv_resultaat    = round2(wv.reduce((s,r)=>s+r.ec-r.ed,0));
+  return { recs, boekjaar, peildatum, defaultLabel:`${boekjaar} Actuals`,
+           balans:bal.length, wv:wv.length, balansverschil, wv_resultaat,
+           sluit: balansverschil === wv_resultaat };
+}
+
+function showExactPreview(ex, filename) {
+  const pr=document.getElementById('imp-pass-row'); if(pr)pr.style.display='none';
+  const li=document.getElementById('exact-label'); if(li && !li.value.trim()) li.value = ex.defaultLabel;
+  const fmt = n => '€ ' + n.toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('preview-meta').textContent =
+    `📄 ${filename} · proef- & saldibalans ${ex.boekjaar} · peildatum ${ex.peildatum} · ${ex.recs.length} rekeningen (${ex.balans} balans / ${ex.wv} W&V)`;
+  document.getElementById('preview-table').innerHTML =
+    `<table class="data-table" style="font-size:12px"><tbody>
+      <tr><td>Balans debet − credit</td><td class="tr-right">${fmt(ex.balansverschil)}</td></tr>
+      <tr><td>W&V-resultaat</td><td class="tr-right">${fmt(ex.wv_resultaat)}</td></tr>
+      <tr class="total"><td>Controle (balans sluit op resultaat)</td><td class="tr-right">${ex.sluit?'✓ sluit':'⚠️ verschil '+fmt(ex.balansverschil-ex.wv_resultaat)}</td></tr>
+    </tbody></table>` +
+    (ex.sluit ? '' : '<div class="note" style="color:#DC2626;margin-top:8px">Let op: balans en W&V sluiten niet op elkaar — controleer de export voor je uploadt.</div>');
+  const el=document.getElementById('import-preview'); el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
 function showPreview(type, filename, rows) {
   const pr=document.getElementById('imp-pass-row'); if(pr)pr.style.display='none';
   const hdrs = rows[0] || [];
@@ -1878,6 +2022,12 @@ function startUpload() {
     const what = q.kind==='omzet' ? `${q.rows.length} maanden parkeeromzet` : `${q.weekly.length} weekwaarden + ${q.subs.length} abonnementen`;
     document.getElementById('confirm-msg').innerHTML =
       `Je staat op het punt <strong>${what}</strong> uit <strong>${imp.file.name}</strong> naar de database te schrijven via de beveiligde import-functie.<br><br>Bestaande waarden voor dezelfde periode worden overschreven (upsert).`;
+  } else if(imp.type==='exact' && imp.exact){
+    const ex=imp.exact;
+    const label=(document.getElementById('exact-label')?.value||ex.defaultLabel).trim();
+    if(!label){ alert('Geef eerst een label op bij het Exact-blok (bijv. "2025 Actuals").'); return; }
+    document.getElementById('confirm-msg').innerHTML =
+      `Je staat op het punt <strong>${ex.recs.length} grootboekstanden</strong> in te lezen als label <strong>"${label}"</strong>, peildatum <strong>${ex.peildatum}</strong>.<br><br>Bestaande standen voor ditzelfde fonds + peildatum + label worden overschreven (upsert).`;
   } else {
     document.getElementById('confirm-msg').innerHTML =
       `Je staat op het punt <strong>${imp.rows.length-1} rijen</strong> uit <strong>${imp.file.name}</strong> te uploaden als <em>${UPLOAD_TYPES[imp.type].label}</em>.<br><br>Bestaande data voor dezelfde periode wordt overschreven (upsert).`;
@@ -1915,6 +2065,38 @@ async function doUpload(type, file, rows) {
 
   // Q-Park: omzet- of weekrapport via beveiligde edge function
   if(type==='qpark'){ if(!imp.qpark) throw new Error('Niet-herkend Q-Park bestand.'); return await uploadQpark(); }
+
+  // Exact Online proef- & saldibalans -> gl_balances
+  if(type==='exact'){
+    const ex = imp.exact || parseExactSaldibalans(imp.rawRows || rows);
+    if(!ex.recs.length) throw new Error('Geen grootboekregels herkend (proef-/saldibalans, niveau Uitgebreid).');
+    const label = (document.getElementById('exact-label')?.value || ex.defaultLabel).trim();
+    if(!label) throw new Error('Geef een label op (bijv. "2025 Actuals").');
+    const VVE = new Set(['4730','4731','4732','4733','4734','4735','4736','4737']);
+
+    // Niet-gemapte rekeningen alvast in gl_account_map zetten (omschrijving), zodat ze niet
+    // uit v_gl_categorie vallen. Bestaande categorie-mapping blijft ongemoeid.
+    await sbUpsert('gl_account_map',
+      ex.recs.map(r => ({ rekening:r.rekening, omschrijving:r.omschrijving })), 'rekening');
+
+    const payload = ex.recs.map(r => ({
+      fund_id: fundId, label, boekjaar: ex.boekjaar, peildatum: ex.peildatum,
+      statement: r.statement, rekening: r.rekening, omschrijving: r.omschrijving,
+      rubriek_path: r.rubriek_path,
+      proef_debet: r.pd, proef_credit: r.pc, eind_debet: r.ed, eind_credit: r.ec,
+      voorlopig: VVE.has(r.rekening),
+    }));
+    await sbUpsert('gl_balances', payload, 'fund_id,peildatum,label,rekening');
+
+    await sbPost('imports', [{
+      fund_id: fundId, source_type: 'other', file_name: file.name,
+      period_label: `${label} · ${ex.peildatum}`, status: 'processed',
+      rows_ingested: payload.length,
+      message: `Exact saldibalans · ${ex.balans} balans / ${ex.wv} W&V · sluit=${ex.sluit}`,
+      imported_by: 'dashboard',
+    }]);
+    return payload.length;
+  }
 
   const hdrs = rows[0].map(h => String(h).toLowerCase().trim());
   const dataRows = rows.slice(1).filter(r => r.some(c => c!==''&&c!=null));
@@ -2073,6 +2255,15 @@ async function sbPost(table, payload) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
     headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
+}
+
+async function sbUpsert(table, payload, onConflict) {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(payload)
   });
   if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
