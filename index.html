@@ -2129,6 +2129,7 @@ async function doUpload(type, file, rows) {
     period_label = `${first[iJ]}-${String(first[iM]).padStart(2,'0')} t/m ${last[iJ]}-${String(last[iM]).padStart(2,'0')}`;
   }
 
+  const spath = await archiveRaw(file, UPLOAD_TYPES[type].source_type);
   await sbPost('imports', [{
     fund_id:       fundId,
     source_type:   UPLOAD_TYPES[type].source_type,
@@ -2138,6 +2139,7 @@ async function doUpload(type, file, rows) {
     rows_ingested: dataRows.length,
     message:       (assetId ? `asset_id:${assetId} · ` : '') + `Headers: ${rows[0].join(' | ')}`,
     imported_by:   'dashboard',
+    storage_path:  spath,
   }]);
   return dataRows.length;
 }
@@ -2237,7 +2239,8 @@ async function uploadArgusScenario(fundId, file){
     await sbPost('scenario_cashflows', payload.slice(i,i+500));
   }
   // Logboek-entry
-  await sbPost('imports',[{fund_id:fundId,source_type:'other',scenario:name,file_name:file.name,status:'processed',rows_ingested:records.length,message:`Argus-scenario "${name}" · ${records.length} cashflow-regels`,imported_by:'dashboard'}]);
+  const spath=await archiveRaw(file,'other');
+  await sbPost('imports',[{fund_id:fundId,source_type:'other',scenario:name,file_name:file.name,status:'processed',rows_ingested:records.length,message:`Argus-scenario "${name}" · ${records.length} cashflow-regels`,imported_by:'dashboard',storage_path:spath}]);
   // Cache invalideren zodat het nieuwe scenario direct in de dropdowns verschijnt
   _scenList=null; Object.keys(_pnlInit).forEach(k=>_pnlInit[k]=false); Object.keys(_fyScen).forEach(k=>_fyScen[k]=null);
   return records.length;
