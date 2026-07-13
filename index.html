@@ -1915,7 +1915,23 @@ async function uploadQpark(){
   });
   let j={}; try{ j=await res.json(); }catch(e){}
   if(!res.ok || j.error) throw new Error(j.error || ('upload mislukt (HTTP '+res.status+')'));
-  return q.kind==='omzet' ? (j.omzet_rows||0) : ((j.weekly_rows||0)+(j.sub_rows||0));
+  const n = q.kind==='omzet' ? (j.omzet_rows||0) : ((j.weekly_rows||0)+(j.sub_rows||0));
+  // Import-logboek bijwerken (best effort; mag de import nooit blokkeren)
+  try{
+    const st = q.kind==='omzet' ? 'qpark_month' : 'qpark_week';
+    const plabel = q.kind==='omzet'
+      ? `omzet · t/m ${q.rows.length?q.rows[q.rows.length-1].period_date:'?'}`
+      : `weekrapport · t/m ${q.asof?(q.asof.year+'-w'+q.asof.week):'?'}`;
+    const msg = q.kind==='omzet'
+      ? `${j.omzet_rows||0} maanden parkeeromzet${j.kort_rows?(' · '+j.kort_rows+' kortparkeren'):''}`
+      : `${j.weekly_rows||0} weekwaarden · ${j.sub_rows||0} abonnementen`;
+    await sbPost('imports', [{
+      fund_id: state.fundId, source_type: st, file_name: imp.file.name,
+      period_label: plabel, status: 'processed', rows_ingested: n,
+      message: msg, imported_by: 'dashboard'
+    }]);
+  }catch(e){ console.warn('import-log niet weggeschreven:', e); }
+  return n;
 }
 
 // ===== Exact Online 'Proef- & saldibalans' parser (ingesprongen verslag -> platte regels) =====
