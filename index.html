@@ -578,13 +578,13 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   </div>
  </div>
 
- <!-- Import-log -->
- <div class="section-label mt12">Import-log · deze sessie</div>
+ <!-- Import-historie -->
+ <div class="section-label mt12">Importhistorie</div>
  <div class="info-card">
   <table class="data-table">
-   <thead><tr><th>Tijdstip</th><th>Bestand</th><th>Type</th><th>Rijen</th><th>Status</th></tr></thead>
+   <thead><tr><th>Tijdstip</th><th>Bestand</th><th>Type</th><th class="tr-right">Rijen</th><th>Status</th><th>Bron</th></tr></thead>
    <tbody id="import-log-body">
-    <tr><td colspan="5" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif;padding:16px">Nog geen imports in deze sessie</td></tr>
+    <tr><td colspan="6" style="text-align:center;color:var(--text3);font-family:'DM Sans',sans-serif;padding:16px">Historie laden…</td></tr>
    </tbody>
   </table>
  </div>
@@ -1569,7 +1569,7 @@ function renderFinanciering(){
     {label:'Eigen vermogen (NAV)',data:[equity],backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)+' ('+(c.raw/tot*100).toFixed(1)+'%)'}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,suggestedMax:tot*1.05,ticks:{...gridOpt.ticks,callback:v=>'€ '+(v/1e6).toFixed(0)+'M'}}}},plugins:[taxLine]});
 }
-function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderFonds();renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();}
+function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderFonds();renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();else if(t==='import')loadImportHistory();}
 function fitScroll(){const el=document.getElementById('mainScroll');if(!el)return;if(window.innerWidth<=880){el.style.maxHeight='none';return;}const top=el.getBoundingClientRect().top;el.style.maxHeight=(window.innerHeight-top)+'px';}
 function placeOmzetControls(name){const bar=document.getElementById('omzetControls');if(!bar)return;const slot=document.getElementById('ctrlSlot-'+name);if(slot){slot.appendChild(bar);bar.style.display='flex';}else{bar.style.display='none';}
   // Op de Fonds-tab doen Periode en Scenario niets → verbergen; Prognose obv juist alleen daar tonen
@@ -1919,6 +1919,7 @@ async function uploadQpark(){
   // Import-logboek bijwerken (best effort; mag de import nooit blokkeren)
   try{
     const st = q.kind==='omzet' ? 'qpark_month' : 'qpark_week';
+    const spath = await archiveRaw(imp.file, st);
     const plabel = q.kind==='omzet'
       ? `omzet · t/m ${q.rows.length?q.rows[q.rows.length-1].period_date:'?'}`
       : `weekrapport · t/m ${q.asof?(q.asof.year+'-w'+q.asof.week):'?'}`;
@@ -1928,7 +1929,7 @@ async function uploadQpark(){
     await sbPost('imports', [{
       fund_id: state.fundId, source_type: st, file_name: imp.file.name,
       period_label: plabel, status: 'processed', rows_ingested: n,
-      message: msg, imported_by: 'dashboard'
+      message: msg, imported_by: 'dashboard', storage_path: spath
     }]);
   }catch(e){ console.warn('import-log niet weggeschreven:', e); }
   return n;
@@ -2062,12 +2063,11 @@ async function confirmUpload() {
   spinner.style.display = 'inline'; btn.disabled = true;
   try {
     const n = await doUpload(imp.type, imp.file, imp.rows);
-    addLogEntry(imp.file.name, imp.type, n, 'verwerkt');
     document.getElementById('import-preview').style.display = 'none';
     clearFile(imp.type);
     toast(`✓ ${n} rijen succesvol geüpload`);
+    loadImportHistory();
   } catch(err) {
-    addLogEntry(imp.file.name, imp.type, imp.rows.length-1, 'fout');
     toast('⚠️ ' + err.message, true);
   } finally { spinner.style.display='none'; btn.disabled=false; }
 }
@@ -2104,12 +2104,13 @@ async function doUpload(type, file, rows) {
     }));
     await sbUpsert('gl_balances', payload, 'fund_id,peildatum,label,rekening');
 
+    const spath = await archiveRaw(file, 'other');
     await sbPost('imports', [{
       fund_id: fundId, source_type: 'other', file_name: file.name,
       period_label: `${label} · ${ex.peildatum}`, status: 'processed',
       rows_ingested: payload.length,
       message: `Exact saldibalans · ${ex.balans} balans / ${ex.wv} W&V · sluit=${ex.sluit}`,
-      imported_by: 'dashboard',
+      imported_by: 'dashboard', storage_path: spath,
     }]);
     return payload.length;
   }
@@ -2283,6 +2284,60 @@ async function sbUpsert(table, payload, onConflict) {
     body: JSON.stringify(payload)
   });
   if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
+}
+
+// Archiveert het ruwe bronbestand in de privé-bucket 'imports-raw'. Best effort: geeft
+// het pad terug, of null als het misgaat (mag de import nooit blokkeren).
+async function archiveRaw(file, sourceType){
+  try{
+    if(!file) return null;
+    const ts=new Date().toISOString().slice(0,19).replace(/[:T]/g,'').replace(/-/g,'');
+    const safe=(file.name||'bestand').replace(/[^\w.\-]+/g,'_');
+    const path=`${sourceType||'other'}/${ts}_${safe}`;
+    const res=await fetch(`${SB_URL}/storage/v1/object/imports-raw/${encodeURI(path)}`,{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'x-upsert':'true','content-type':file.type||'application/octet-stream'},
+      body:file
+    });
+    if(!res.ok){ console.warn('archiveRaw mislukt:', await res.text().catch(()=>res.status)); return null; }
+    return path;
+  }catch(e){ console.warn('archiveRaw fout:', e); return null; }
+}
+
+async function dlImport(path){
+  try{
+    const res=await fetch(`${SB_URL}/storage/v1/object/sign/imports-raw/${encodeURI(path)}`,{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'content-type':'application/json'},
+      body:JSON.stringify({expiresIn:3600})
+    });
+    const j=await res.json().catch(()=>null);
+    if(j&&j.signedURL){ window.open(SB_URL+'/storage/v1'+j.signedURL,'_blank'); }
+    else alert('Downloadlink maken mislukt.');
+  }catch(e){ alert('Downloadlink maken mislukt: '+e.message); }
+}
+
+async function loadImportHistory(){
+  const body=document.getElementById('import-log-body');
+  if(!body) return;
+  const rows=await sbGet(`imports?select=created_at,file_name,source_type,rows_ingested,status,storage_path&order=created_at.desc&limit=30`);
+  if(!rows||!rows.length){ body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);font-family:\'DM Sans\',sans-serif;padding:16px">Nog geen imports geregistreerd</td></tr>'; return; }
+  const SRC_LABEL={qpark_month:'Q-Park omzet',qpark_week:'Q-Park week',mt940:'MT940',snelstart:'SnelStart',taxatie:'Taxatie',register:'Register',other:'Overig / Exact'};
+  const SRC_BADGE={qpark_month:'b-orange',qpark_week:'b-orange',taxatie:'b-blue',register:'b-blue',other:'b-blue'};
+  body.innerHTML=rows.map(e=>{
+    const dt=e.created_at?new Date(e.created_at).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    const badge=SRC_BADGE[e.source_type]||'b-blue';
+    const lbl=SRC_LABEL[e.source_type]||e.source_type;
+    const dl=e.storage_path?`<button class="btn" style="padding:2px 8px;font-size:11px" onclick="dlImport('${e.storage_path.replace(/'/g,"\\'")}')">⬇ Download</button>`:'<span style="color:var(--text3)">—</span>';
+    return `<tr>
+     <td>${dt}</td>
+     <td style="font-family:'DM Sans',sans-serif">${e.file_name||'—'}</td>
+     <td><span class="badge ${badge}">${lbl}</span></td>
+     <td class="tr-right">${e.rows_ingested??'—'}</td>
+     <td><span class="badge ${e.status==='processed'?'b-green':(e.status==='failed'?'b-red':'b-blue')}">${e.status||'—'}</span></td>
+     <td>${dl}</td>
+    </tr>`;
+  }).join('');
 }
 
 function addLogEntry(filename, type, rows, status) {
