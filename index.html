@@ -521,7 +521,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
    <div class="uz-title">Exact Online export</div>
    <div class="uz-sub">proef- &amp; saldibalans · grootboekstanden · .xlsx</div>
    <div style="margin:4px 0;width:100%">
-    <input type="text" id="exact-label" class="ctrl-select" style="font-size:12px;width:100%;box-sizing:border-box" placeholder="Label, bijv. 2025 Actuals">
+    <input type="text" id="exact-label" class="ctrl-select" style="font-size:12px;width:100%;box-sizing:border-box" placeholder="Label (standaard: Actuals — houd dit gelijk over kwartalen/jaren)">
    </div>
    <div class="uz-filename" id="file-exact-name"></div>
    <div class="uz-actions">
@@ -1973,7 +1973,7 @@ function parseExactSaldibalans(rows) {
   const round2 = n => Math.round(n*100)/100;
   const balansverschil = round2(bal.reduce((s,r)=>s+r.ed-r.ec,0));
   const wv_resultaat    = round2(wv.reduce((s,r)=>s+r.ec-r.ed,0));
-  return { recs, boekjaar, peildatum, defaultLabel:`${boekjaar} Actuals`,
+  return { recs, boekjaar, peildatum, defaultLabel:'Actuals',
            balans:bal.length, wv:wv.length, balansverschil, wv_resultaat,
            sluit: balansverschil === wv_resultaat };
 }
