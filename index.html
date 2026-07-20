@@ -244,15 +244,15 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  </div>
  <div class="section-label">Liquiditeit</div>
  <div class="kpi-grid">
-  <div class="kpi-card gray"><div class="kpi-label">Saldo liquiditeitsreserve</div><div class="kpi-val sm">€ 425.000</div><div class="kpi-sub">peildatum 31-05-2026</div></div>
-  <div class="kpi-card gray"><div class="kpi-label">Liquiditeitsdekking</div><div class="kpi-val sm">4,8 mnd</div><div class="kpi-sub">reserve / gem. maandlasten</div></div>
-  <div class="kpi-card gray"><div class="kpi-label">Vrije kasstroom YTD</div><div class="kpi-val sm">€ 188.000</div><div class="kpi-sub">na rente &amp; aflossing</div></div>
-  <div class="kpi-card gray"><div class="kpi-label">Kaspositie ABN AMRO</div><div class="kpi-val sm">€ 311.420</div><div class="kpi-sub">dagniveau · MT940</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Saldo liquiditeitsreserve</div><div class="kpi-val sm" id="fdLiqReserve">€ 425.000</div><div class="kpi-sub" id="fdLiqReserveSub">spaarrekening</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Liquiditeitsdekking</div><div class="kpi-val sm" id="fdLiqDekking">4,8 mnd</div><div class="kpi-sub" id="fdLiqDekkingSub">totale liquiditeit / gem. maandlasten</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Vrije kasstroom YTD</div><div class="kpi-val sm" id="fdVks">€ 188.000</div><div class="kpi-sub" id="fdVksSub">na rente &amp; aflossing</div></div>
+  <div class="kpi-card gray"><div class="kpi-label">Kaspositie ABN AMRO</div><div class="kpi-val sm" id="fdKaspositie">€ 311.420</div><div class="kpi-sub" id="fdKaspositieSub">betaalrekening</div></div>
  </div>
  <div class="section-label">Vooruitblik &amp; signalering · op basis van scenario <span id="fcScen" class="mono" style="text-transform:none;letter-spacing:0;color:var(--text2)"></span></div>
  <div id="signalBanner" class="note">&mdash;</div>
  <div class="grid2 mt12">
-  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Liquiditeitsprojectie (18 maanden)</div><div class="chart-subtitle">Verwachte reserve vs. minimumbuffer · scenario-gestuurd</div></div></div><div class="chart-wrap sm"><canvas id="liqChart"></canvas></div></div>
+  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Liquiditeitsprognose</div><div class="chart-subtitle">vanaf laatste actuals · per scenariojaar · scenario-gestuurd</div></div></div><div class="chart-wrap sm"><canvas id="liqChart"></canvas></div></div>
   <div class="info-card"><div class="info-card-title">Covenant-vooruitblik</div><div id="covRows"></div></div>
  </div>
  <div class="hint">Aannames (concept): rente €84k/mnd, aflossing €33k/mnd, uitkering €50k/mnd, minimumbuffer €150k, NRI per scenario, en covenantdrempels (ICR &ge;1,40&times; · DSCR &ge;1,20&times; · LTV &le;65%) zijn illustratief tot de leningsovereenkomst en kasstroomdata zijn ingelezen.</div>
@@ -457,13 +457,35 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
  <div class="kpi-grid">
   <div class="kpi-card orange"><div class="kpi-label">Actieve participanten</div><div class="kpi-val">108</div><div class="kpi-sub">1.864 participaties à €10.000</div></div>
   <div class="kpi-card gray"><div class="kpi-label">Gem. participaties p.p.</div><div class="kpi-val sm">17,3</div><div class="kpi-sub">spreiding deelnemers</div></div>
-  <div class="kpi-card amber"><div class="kpi-label">Concentratie top-5</div><div class="kpi-val sm">&mdash;</div><div class="kpi-sub">aandeel 5 grootste · wacht op register</div></div>
   <div class="kpi-card green"><div class="kpi-label">Brugfinanciering afgelost</div><div class="kpi-val sm">100%</div><div class="kpi-sub">13 geconverteerd · laatste tranche jan 2026</div></div>
  </div>
- <div class="section-label mt12">Verdeling</div>
- <div class="grid2">
-  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Participaties per distributiekanaal</div><div class="chart-subtitle">indicatieve verdeling &middot; wacht op deelnemersregister</div></div></div><div class="chart-wrap sm"><canvas id="kanaalChart"></canvas></div></div>
-  <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Uitkeringen per participatie</div><div class="chart-subtitle">Per kwartaal · concept</div></div></div><div class="chart-wrap sm"><canvas id="uitkeringChart"></canvas></div></div>
+
+ <div class="section-label mt12">Uitkeringen &amp; direct rendement · actuals</div>
+ <div class="chart-card">
+  <div class="chart-header"><div><div class="chart-title">Uitkeringen per periode</div><div class="chart-subtitle" id="uitkPeriodeSub">gerealiseerd uit de GL</div></div>
+   <div class="seg" id="uitkGranSeg"><button data-g="jaar">Jaar</button><button data-g="half" class="active">Halfjaar</button><button data-g="kwartaal">Kwartaal</button></div>
+  </div>
+  <div class="chart-wrap sm"><canvas id="uitkeringChart"></canvas></div>
+ </div>
+
+ <div class="section-label mt12">Since inception (gemiddelden)</div>
+ <div class="info-card" style="overflow-x:auto">
+  <table class="data-table">
+   <thead><tr><th>Post</th><th class="tr-right">Totaal</th><th class="tr-right">per jaar</th><th class="tr-right">per halfjaar</th><th class="tr-right">per kwartaal</th></tr></thead>
+   <tbody>
+    <tr><td>Uitkering</td><td class="tr-right" id="siUitkTot">&mdash;</td><td class="tr-right" id="siUitkJr">&mdash;</td><td class="tr-right" id="siUitkHj">&mdash;</td><td class="tr-right" id="siUitkKw">&mdash;</td></tr>
+    <tr><td>Direct rendement</td><td class="tr-right" id="siDirTot">&mdash;</td><td class="tr-right" id="siDirJr">&mdash;</td><td class="tr-right" id="siDirHj">&mdash;</td><td class="tr-right" id="siDirKw">&mdash;</td></tr>
+    <tr><td>Indirect rendement</td><td class="tr-right" id="siIndTot">&mdash;</td><td class="tr-right" id="siIndJr">&mdash;</td><td class="tr-right" id="siIndHj">&mdash;</td><td class="tr-right" id="siIndKw">&mdash;</td></tr>
+   </tbody>
+  </table>
+ </div>
+
+ <div class="section-label mt12">Doorkijk incl. forecast <span id="ptScenLbl" style="font-weight:400;color:var(--text2);font-size:11px"></span></div>
+ <div class="kpi-grid">
+  <div class="kpi-card orange"><div class="kpi-label">Gem. direct rendement p.j.</div><div class="kpi-val sm" id="dkDirAvg">&mdash;</div><div class="kpi-sub">over de looptijd · actuals + forecast</div></div>
+  <div class="kpi-card blue"><div class="kpi-label">Direct rendement (looptijd)</div><div class="kpi-val sm" id="dkDirCum">&mdash;</div><div class="kpi-sub">cumulatief t/m einde scenario</div></div>
+  <div class="kpi-card blue"><div class="kpi-label">Indirect rendement (looptijd)</div><div class="kpi-val sm" id="dkIndCum">&mdash;</div><div class="kpi-sub" id="dkIndCumSub">o.b.v. eindwaarde</div></div>
+  <div class="kpi-card green"><div class="kpi-label">Totaal rendement (looptijd)</div><div class="kpi-val sm" id="dkTot">&mdash;</div><div class="kpi-sub">direct + indirect, cumulatief</div></div>
  </div>
 </div>
 
@@ -509,6 +531,15 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
    <div><div class="ctrl-label" style="margin-bottom:4px;font-size:11px">NAV p.p. (&euro;)</div><input type="number" step="0.01" id="nav-value" class="ctrl-select" style="min-width:150px" placeholder="bv. 9961.84"></div>
    <button class="btn primary" onclick="saveNav()">Opslaan</button>
    <div id="nav-status" style="font-size:12px;color:var(--text2);padding-bottom:8px"></div>
+  </div>
+ </div>
+
+ <div class="info-card" style="margin-bottom:14px;padding:14px 18px">
+  <div class="ctrl-label" style="margin-bottom:8px">Eindwaarde / exit-NAV per participatie &middot; aanname voor indirect rendement</div>
+  <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+   <div><div class="ctrl-label" style="margin-bottom:4px;font-size:11px">Eindwaarde p.p. (&euro;)</div><input type="number" step="0.01" id="eind-value" class="ctrl-select" style="min-width:150px" placeholder="bv. 10500"></div>
+   <button class="btn primary" onclick="saveEindwaarde()">Opslaan</button>
+   <div id="eind-status" style="font-size:12px;color:var(--text2);padding-bottom:8px"></div>
   </div>
  </div>
 
@@ -1562,9 +1593,34 @@ async function loadFondsenOverview(){
     if(tax)setTxt('foLtv',(p/tax*100).toFixed(1).replace('.',',')+'%');}
 }
 
+// FASE 3 — liquiditeit (actuals): kaspositie (betaal) + liquiditeitsreserve (spaar) + vrije kasstroom + dekking
+async function loadLiquidity(){
+  if(!state.fundId)return;
+  const liq=await sbGet(`v_actuals_liquiditeit?select=peildatum,kaspositie,liquiditeitsreserve,reserves_voorziening&order=peildatum.desc`);
+  if(!liq||!liq.length)return;
+  const cur=liq[0];
+  const kas=Number(cur.kaspositie), reserve=Number(cur.liquiditeitsreserve), totaal=kas+reserve;
+  const nd=String(cur.peildatum).split('-'), dat=nd[2]+'-'+nd[1]+'-'+nd[0];
+  setTxt('fdLiqReserve','€ '+Math.round(totaal).toLocaleString('nl-NL'));
+  setTxt('fdKaspositie','€ '+Math.round(kas).toLocaleString('nl-NL'));
+  const rSub=document.getElementById('fdLiqReserveSub');if(rSub)rSub.textContent='alle ABN-rekeningen (betaal + spaar) · '+dat;
+  const kSub=document.getElementById('fdKaspositieSub');if(kSub)kSub.textContent='betaalrekening (rekening-courant) · '+dat;
+  const ap=await getActualsPnl();
+  const val=re=>{if(!ap)return 0;const x=ap.rows.find(r=>new RegExp(re,'i').test(r.label));return x?Number(x.signed_amount):0;};
+  const rnf=val('resultaat na financiering');
+  const yr=+nd[0], prior=liq.find(r=>String(r.peildatum)===`${yr-1}-12-31`);
+  const dReserve=Number(cur.reserves_voorziening)-(prior?Number(prior.reserves_voorziening):0);
+  const vks=rnf+dReserve;
+  setTxt('fdVks','€ '+Math.round(vks).toLocaleString('nl-NL'));
+  const vSub=document.getElementById('fdVksSub');if(vSub)vSub.textContent=`na rente & aflossing · incl. € ${Math.round(dReserve).toLocaleString('nl-NL')} dotatie reserves`;
+  const lasten=Math.abs(val('totale exploitatielasten'))+Math.abs(val('fondskosten'))+Math.abs(val('rente'));
+  const mnd=+nd[1];
+  if(mnd&&lasten)setTxt('fdLiqDekking',(totaal/(lasten/mnd)).toFixed(1).replace('.',',')+' mnd');
+}
+
 async function loadFondsKpis(){
   if(!state.fundId)return;
-  loadDistributionKpis();loadNav();loadTotalReturn();
+  loadDistributionKpis();loadNav();loadTotalReturn();loadLiquidity();
   const scen=_fondsScen||await getScenarioId();
   const scens=await loadScenarios();
   const fsel=document.getElementById('fondsScenSel');
@@ -1572,7 +1628,7 @@ async function loadFondsKpis(){
     if(!fsel.options.length && scens.length){
       fsel.innerHTML='<option value="actuals">Actuals (Exact)</option>'+scens.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       fsel.value=scen||scens[0].id;
-      fsel.onchange=()=>{ _fondsScen=fsel.value; loadFondsKpis(); };
+      fsel.onchange=()=>{ _fondsScen=fsel.value; loadFondsKpis(); renderForecast(); };
     } else if(scen){ fsel.value=scen; }
   }
   if(!scen)return;
@@ -1597,24 +1653,42 @@ async function loadFondsKpis(){
 // ---- forecast: liquiditeit & covenanten ----
 function fundNRI(){if(state.scenario!=='Actuals')return FC.nri[state.scenario]||FC.nri.Forecast;const cur=omzetOf(FUND,state.year);const f=monthsFilled(cur)||1;const rr=sumArr(cur)/f*12;return Math.round(FC.nri.Forecast*rr/byId('sjp').scen.Forecast);}
 function monthLabels(){const out=[];for(let i=1;i<=FC.horizon;i++){const d=new Date(2026,5+i,1);out.push(MAAND[d.getMonth()]+" '"+String(d.getFullYear()).slice(2));}return out;}
-function liqProj(){const nri=fundNRI();const net=nri/12-FC.interestM-FC.amortM-FC.distM;let bal=FC.start;const pts=[];let breach=-1;for(let i=0;i<FC.horizon;i++){bal+=net;pts.push(Math.round(bal));if(breach<0&&bal<FC.buffer)breach=i;}return {pts,net,nri,breach};}
+async function _scenName(){const s0=_fondsScen||await getScenarioId();if(s0==='actuals')return 'Actuals → prognose (Business Plan)';const sl=await loadScenarios();const s=(sl||[]).find(x=>x.id===s0);return s?s.name:'Business Plan';}
+async function computeLiqProj(){
+  const s0=_fondsScen||await getScenarioId();
+  const scen=(s0==='actuals')?await getScenarioId():s0;
+  const liq=await sbGet(`v_actuals_liquiditeit?select=peildatum,kaspositie,liquiditeitsreserve&order=peildatum.desc`);
+  let start=1040847, sd='2026-06-30';
+  if(liq&&liq.length){start=Number(liq[0].kaspositie)+Number(liq[0].liquiditeitsreserve);sd=String(liq[0].peildatum);}
+  const rows=await sbGet(`v_fund_pnl?select=period_end,label,signed_amount&scenario_id=eq.${scen}&period_type=eq.fy&order=period_end.asc`);
+  const chg={}; (rows||[]).forEach(r=>{if(/mutatie liquiditeitsreserve/i.test(r.label)) chg[+String(r.period_end).slice(0,4)]=-Number(r.signed_amount);});
+  const p=sd.split('-'), sy=+p[0], sm=+p[1];
+  const buffer=(typeof FC!=='undefined'&&FC.buffer)?FC.buffer:150000;
+  const labels=[`${p[2]}-${p[1]}-'${p[0].slice(2)}`], pts=[Math.round(start)];
+  let bal=start, breach=-1;
+  if(chg[sy]!=null&&sm<12){bal+=chg[sy]*(12-sm)/12;labels.push(`ye '${String(sy).slice(2)}`);pts.push(Math.round(bal));if(breach<0&&bal<buffer)breach=pts.length-1;}
+  for(let y=sy+1;y<=sy+6;y++){if(chg[y]==null)break;bal+=chg[y];labels.push(`'${String(y).slice(2)}`);pts.push(Math.round(bal));if(breach<0&&bal<buffer)breach=pts.length-1;}
+  const net=(pts.length>1)?(pts[pts.length-1]-pts[0])/(pts.length-1):0;
+  return {pts,labels,breach,buffer,net};
+}
 function covRows(){const nri=fundNRI();const icr=nri/COV.interest,dscr=nri/COV.debtService,ltv=COV.debt/COV.value;return [
   {k:'ICR',f:icr.toFixed(2)+'×',th:'≥ '+COV.icrMin.toFixed(2)+'×',ok:icr>=COV.icrMin,hr:(icr/COV.icrMin-1)*100},
   {k:'DSCR',f:dscr.toFixed(2)+'×',th:'≥ '+COV.dscrMin.toFixed(2)+'×',ok:dscr>=COV.dscrMin,hr:(dscr/COV.dscrMin-1)*100},
   {k:'LTV',f:(ltv*100).toFixed(1)+'%',th:'≤ '+(COV.ltvMax*100).toFixed(0)+'%',ok:ltv<=COV.ltvMax,hr:(COV.ltvMax/ltv-1)*100}];}
-function renderForecast(){
-  const lp=liqProj(),cov=covRows(),labels=monthLabels(),covBreach=cov.filter(c=>!c.ok);
-  document.getElementById('fcScen').textContent=state.scenario;
-  const banner=document.getElementById('signalBanner');
-  if(lp.breach>=0){banner.className='note red';banner.innerHTML=`&#9888; <strong>Liquiditeitssignaal:</strong> de reserve zakt onder de minimumbuffer (€ ${Math.round(FC.buffer/1000)}k) vanaf <strong>${labels[lp.breach]}</strong> in scenario ${state.scenario}. Overweeg uitkering te temporiseren, kosten te faseren of herfinanciering voor te bereiden.`;}
-  else if(covBreach.length){banner.className='note red';banner.innerHTML=`&#9888; <strong>Covenant-signaal:</strong> ${covBreach.map(c=>c.k).join(', ')} onder de drempel in scenario ${state.scenario}.`;}
-  else if(lp.net<0){banner.className='note amber';banner.innerHTML=`<strong>Let op:</strong> de liquiditeit daalt met ± € ${Math.round(-lp.net/1000)}k/maand, maar blijft de komende 18 maanden boven de buffer. Covenanten ruim binnen norm.`;}
-  else {banner.className='note green';banner.innerHTML=`<strong>Geen knelpunten verwacht.</strong> Liquiditeit en alle covenanten blijven de komende 18 maanden binnen de norm (scenario ${state.scenario}).`;}
+async function renderForecast(){
+  const lp=await computeLiqProj(),cov=covRows(),labels=lp.labels,covBreach=cov.filter(c=>!c.ok);
+  const scNm=await _scenName();
+  document.getElementById('fcScen').textContent=scNm;
+  const banner=document.getElementById('signalBanner');const bufK=Math.round(lp.buffer/1000);
+  if(lp.breach>=0){banner.className='note red';banner.innerHTML=`&#9888; <strong>Liquiditeitssignaal:</strong> de liquiditeit zakt onder de minimumbuffer (€ ${bufK}k) bij <strong>${labels[lp.breach]}</strong> in scenario ${scNm}. Overweeg uitkering te temporiseren of kosten te faseren.`;}
+  else if(covBreach.length){banner.className='note red';banner.innerHTML=`&#9888; <strong>Covenant-signaal:</strong> ${covBreach.map(c=>c.k).join(', ')} onder de drempel in scenario ${scNm}.`;}
+  else if(lp.net<0){banner.className='note amber';banner.innerHTML=`<strong>Let op:</strong> de liquiditeit daalt met ± € ${Math.round(-lp.net/1000)}k per jaar, maar blijft boven de buffer. Covenanten binnen norm.`;}
+  else {banner.className='note green';banner.innerHTML=`<strong>Geen knelpunten verwacht.</strong> Liquiditeit en covenanten blijven binnen de norm (scenario ${scNm}).`;}
   if(liqChart)liqChart.destroy();
   const danger=lp.breach>=0,col=danger?RED:ORANGE;
   liqChart=new Chart(document.getElementById('liqChart'),{type:'line',data:{labels,datasets:[
-    {label:'Liquiditeitsreserve (prognose)',data:lp.pts,borderColor:col,backgroundColor:col+'1f',borderWidth:2,tension:.25,pointRadius:0,fill:true},
-    {label:'Minimumbuffer',data:labels.map(()=>FC.buffer),borderColor:RED,borderDash:[5,4],borderWidth:1.5,pointRadius:0}]},
+    {label:'Liquiditeit (prognose)',data:lp.pts,borderColor:col,backgroundColor:col+'1f',borderWidth:2,tension:.25,pointRadius:3,fill:true},
+    {label:'Minimumbuffer',data:labels.map(()=>lp.buffer),borderColor:RED,borderDash:[5,4],borderWidth:1.5,pointRadius:0}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)}}},scales:{x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
   document.getElementById('covRows').innerHTML=cov.map(c=>`<div class="conv-row"><div class="conv-left"><span class="dot" style="background:${c.ok?'var(--green)':'var(--red)'}"></span><div><div style="font-weight:500">${c.k}</div><div style="font-size:11px;color:var(--text2)">prognose ${c.f} · drempel ${c.th}</div></div></div><div style="text-align:right"><div class="mono" style="font-size:13px;color:${c.ok?'var(--green)':'var(--red)'}">${c.ok?'OK':'BREACH'}</div><div style="font-size:11px;color:var(--text3)">${c.hr>=0?'+':''}${c.hr.toFixed(0)}% ruimte</div></div></div>`).join('');
 }
@@ -1717,7 +1791,83 @@ function renderFinanciering(){
     {label:'Eigen vermogen (NAV)',data:[equity],backgroundColor:ORANGE+'cc',borderRadius:3,stack:'s'}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...legendBottom,tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtEUR(c.raw)+' ('+(c.raw/tot*100).toFixed(1)+'%)'}}},scales:{x:{...gridOpt,stacked:true},y:{...gridOpt,stacked:true,suggestedMax:tot*1.05,ticks:{...gridOpt.ticks,callback:v=>'€ '+(v/1e6).toFixed(0)+'M'}}}},plugins:[taxLine]});
 }
-function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderKanaal();renderUitkering();}else if(t==='fonds'){renderFonds();renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();else if(t==='import')loadImportHistory();}
+// FASE 5 — Participanten: uitkeringen, direct/indirect rendement (actuals + since inception) en forecast-doorkijk
+let _uitkGran='half', _partData=null;
+function _perLabel(pd,span){const d=String(pd).split('-');const yr="'"+d[0].slice(2);if(span<=3)return 'Q'+Math.ceil(+d[1]/3)+' '+yr;if(span<=6)return (+d[1]<=6?'H1':'H2')+' '+yr;return d[0];}
+async function renderParticipanten(){
+  if(!state.fundId)return;
+  const per=await sbGet(`v_actuals_uitkering_periode?select=peildatum,prev_peildatum,uitkering,span_maanden&order=peildatum.asc`);
+  const nav=await sbGet(`nav_history?select=peildatum,nav_per_participatie&fund_id=eq.${state.fundId}&order=peildatum.asc`);
+  const kap=MASTER.kapitaal||18640000, inleg=(MASTER.kapitaal&&MASTER.participaties)?MASTER.kapitaal/MASTER.participaties:10000;
+  _partData={per:per||[],nav:nav||[],kap,inleg};
+  document.querySelectorAll('#uitkGranSeg button').forEach(b=>b.onclick=()=>{_uitkGran=b.dataset.g;document.querySelectorAll('#uitkGranSeg button').forEach(x=>x.classList.toggle('active',x===b));renderUitkeringChart();});
+  renderUitkeringChart();renderSinceInception();renderDoorkijk();
+}
+function renderUitkeringChart(){
+  if(!_partData)return;const {per,kap}=_partData;let rows;
+  if(_uitkGran==='jaar'){const m={};per.forEach(p=>{const y=String(p.peildatum).slice(0,4);m[y]=(m[y]||0)+Number(p.uitkering);});rows=Object.keys(m).sort().map(y=>({label:y,uitk:m[y]}));}
+  else{rows=per.map(p=>({label:_perLabel(p.peildatum,p.span_maanden)+(_uitkGran==='kwartaal'&&p.span_maanden>3?' (½jr)':''),uitk:Number(p.uitkering)}));}
+  if(uitkeringChart)uitkeringChart.destroy();
+  uitkeringChart=new Chart(document.getElementById('uitkeringChart'),{type:'bar',data:{labels:rows.map(r=>r.label),datasets:[{label:'Uitkering',data:rows.map(r=>Math.round(r.uitk)),backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>'Uitkering: '+fmtEUR(c.raw)+'  ·  direct '+(c.raw/kap*100).toFixed(2).replace('.',',')+'%'}}},scales:{x:gridOpt,y:{...gridOpt,ticks:{...gridOpt.ticks,callback:v=>fmtK(v)}}}}});
+  const sub=document.getElementById('uitkPeriodeSub');if(sub)sub.textContent='gerealiseerd uit de GL · '+(_uitkGran==='jaar'?'per jaar':_uitkGran==='kwartaal'?'per kwartaal (½jr-posten gemarkeerd)':'per halfjaar');
+}
+function renderSinceInception(){
+  if(!_partData)return;const {per,nav,kap}=_partData;
+  const totUitk=per.reduce((s,p)=>s+Number(p.uitkering),0);
+  const totM=per.reduce((s,p)=>s+Number(p.span_maanden),0);
+  const jr=totM/12,hj=totM/6,kw=totM/3;
+  setTxt('siUitkTot','€ '+Math.round(totUitk).toLocaleString('nl-NL'));
+  setTxt('siUitkJr',jr?'€ '+Math.round(totUitk/jr).toLocaleString('nl-NL'):'—');
+  setTxt('siUitkHj',hj?'€ '+Math.round(totUitk/hj).toLocaleString('nl-NL'):'—');
+  setTxt('siUitkKw',kw?'€ '+Math.round(totUitk/kw).toLocaleString('nl-NL'):'—');
+  const dt=totUitk/kap*100;
+  setTxt('siDirTot',dt.toFixed(2).replace('.',',')+'%');
+  setTxt('siDirJr',jr?(dt/jr).toFixed(2).replace('.',',')+'%':'—');
+  setTxt('siDirHj',hj?(dt/hj).toFixed(2).replace('.',',')+'%':'—');
+  setTxt('siDirKw',kw?(dt/kw).toFixed(2).replace('.',',')+'%':'—');
+  if(nav.length>=2){const s0=Number(nav[0].nav_per_participatie),ls=Number(nav[nav.length-1].nav_per_participatie);const it=(ls/s0-1)*100;
+    setTxt('siIndTot',pctS(it));setTxt('siIndJr',jr?pctS(it/jr):'—');setTxt('siIndHj',hj?pctS(it/hj):'—');setTxt('siIndKw',kw?pctS(it/kw):'—');}
+}
+async function renderDoorkijk(){
+  if(!_partData)return;const {per,kap,inleg}=_partData;
+  const scen=(_fondsScen&&_fondsScen!=='actuals')?_fondsScen:await getScenarioId();
+  const fc=await sbGet(`v_fund_pnl?select=period_end,label,signed_amount&scenario_id=eq.${scen}&period_type=eq.fy&order=period_end.asc`);
+  const fcU={};(fc||[]).forEach(r=>{if(/uitkering aan participanten/i.test(r.label))fcU[+String(r.period_end).slice(0,4)]=Number(r.signed_amount);});
+  const realY={};per.forEach(p=>{const y=+String(p.peildatum).slice(0,4);realY[y]=(realY[y]||0)+Number(p.uitkering);});
+  const lastY=per.length?+String(per[per.length-1].peildatum).slice(0,4):new Date().getFullYear();
+  const lastM=per.length?+String(per[per.length-1].peildatum).slice(5,7):6;
+  const fcYears=Object.keys(fcU).map(Number);
+  const startY=Math.min(per.length?+String(per[0].peildatum).slice(0,4):lastY, fcYears.length?Math.min(...fcYears):lastY);
+  const endY=fcYears.length?Math.max(...fcYears):lastY;
+  let tot=0;
+  for(let y=startY;y<=endY;y++){
+    if(y<lastY)tot+=(realY[y]||0);
+    else if(y===lastY)tot+=(realY[y]||0)+((fcU[y]!=null)?fcU[y]*(12-lastM)/12:0);
+    else tot+=(fcU[y]||0);
+  }
+  const looptijd=(endY-startY)+0.5;
+  const dirCum=tot/kap*100, dirAvg=looptijd?dirCum/looptijd:0;
+  setTxt('dkDirAvg',dirAvg.toFixed(2).replace('.',',')+'%');
+  setTxt('dkDirCum','+'+dirCum.toFixed(1).replace('.',',')+'%');
+  const asm=await sbGet(`assumptions?select=value&fund_id=eq.${state.fundId}&key=eq.eindwaarde_nav`);
+  const eind=(asm&&asm.length)?Number(asm[0].value):null;
+  let indCum=null;
+  if(eind!=null){indCum=(eind/inleg-1)*100;setTxt('dkIndCum',pctS(indCum));const s=document.getElementById('dkIndCumSub');if(s)s.textContent=`eindwaarde € ${eind.toLocaleString('nl-NL')} · gem. ${pctS(looptijd?indCum/looptijd:0)} p.j.`;}
+  else{setTxt('dkIndCum','—');const s=document.getElementById('dkIndCumSub');if(s)s.textContent='voer eindwaarde in op Data-import';}
+  setTxt('dkTot',indCum!=null?pctS(dirCum+indCum):'—');
+  const nm=await _scenName();const sl=document.getElementById('ptScenLbl');if(sl)sl.textContent='· '+nm;
+}
+async function saveEindwaarde(){
+  const st=document.getElementById('eind-status'),v=document.getElementById('eind-value');
+  if(!state.fundId){if(st)st.textContent='Selecteer eerst een fonds.';return;}
+  if(!v||v.value===''){if(st)st.textContent='Vul een eindwaarde in.';return;}
+  try{await sbUpsert('assumptions',{fund_id:state.fundId,scenario:'all',key:'eindwaarde_nav',value:Number(v.value),unit:'eur',note:'exit-NAV p.p. aanname'},'fund_id,scenario,key');
+    if(st)st.textContent='✓ Eindwaarde opgeslagen: € '+Number(v.value).toLocaleString('nl-NL');
+    if(state.tab==='participanten')renderDoorkijk();
+  }catch(e){if(st)st.textContent='Fout: '+e.message;}
+}
+
+function renderTab(t){if(t==='asset')renderAsset();else if(t==='portefeuille')renderPortfolio();else if(t==='participanten'){renderParticipanten();}else if(t==='fonds'){renderFonds();renderNav();renderForecast();}else if(t==='financiering')renderFinanciering();else if(t==='import')loadImportHistory();}
 function fitScroll(){const el=document.getElementById('mainScroll');if(!el)return;if(window.innerWidth<=880){el.style.maxHeight='none';return;}const top=el.getBoundingClientRect().top;el.style.maxHeight=(window.innerHeight-top)+'px';}
 function placeOmzetControls(name){const bar=document.getElementById('omzetControls');if(!bar)return;const slot=document.getElementById('ctrlSlot-'+name);if(slot){slot.appendChild(bar);bar.style.display='flex';}else{bar.style.display='none';}
   // Op de Fonds-tab doen Periode en Scenario niets → verbergen; Prognose obv juist alleen daar tonen
