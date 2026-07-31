@@ -741,7 +741,8 @@ function periodYScale(){const yrs=DREMPELS?Object.keys(DREMPELS).map(Number):[];
 function setActivePeriod(){document.querySelectorAll('#periodSeg button').forEach(b=>b.classList.toggle('active',b.dataset.p===state.period));}
 function renderCrumb(){const el=document.getElementById('assetCrumb');const p=[];p.push(`<a data-lvl="jaar">Alle jaren</a>`);if(['halfjaar','kwartaal','maand','dag'].includes(state.period)){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='halfjaar'?`<span class="cur">${state.year}</span>`:`<a data-lvl="halfjaar">${state.year}</a>`);}if(state.h!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='kwartaal'?`<span class="cur">H${state.h+1}</span>`:`<a data-lvl="kwartaal">H${state.h+1}</a>`);}if(state.q!=null){p.push(`<span class="sep">&rsaquo;</span>`);p.push(state.period==='maand'?`<span class="cur">Q${state.q+1}</span>`:`<a data-lvl="maand">Q${state.q+1}</a>`);}if(state.m!=null&&state.period==='dag')p.push(`<span class="sep">&rsaquo;</span><span class="cur">${MAAND[state.m]} ${state.year}</span>`);el.innerHTML=p.join(' ');el.querySelectorAll('a[data-lvl]').forEach(a=>a.onclick=()=>gotoLevel(a.dataset.lvl));}
 function gotoLevel(lvl){state.period=lvl;if(lvl==='jaar'||lvl==='halfjaar'){state.h=state.q=state.m=null;}else if(lvl==='kwartaal'){state.q=state.m=null;}else if(lvl==='maand'){state.m=null;}setActivePeriod();renderAsset();}
-function benchDataset(bench,data){if(bench.kind==='year')return {type:'bar',label:bench.label,data,backgroundColor:BLUE+'88',borderRadius:4,order:3};return {type:'line',label:bench.label,data,borderColor:AMBER,borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,order:1};}
+function benchDataset(bench,data){return {type:'bar',label:bench.label,data,backgroundColor:(bench.kind==='year'?BLUE:AMBER)+'88',borderRadius:4,order:3};}
+function benchDaily(bench,m){if(!bench||bench.kind!=='year'||bench.monthly[m]==null)return null;const by=+bench.label,bm=bench.monthly[m],{w,t,d}=dayWeights(by,m),out=[];for(let i=0;i<d;i++)out.push(bm*w[i]/t);return out;}
 
 let REAL_OMZET=null, FC_OMZET=null, IM_OMZET=null, DREMPELS=null, _omzetLoaded=false, _omzetLoading=false;
 let txChart, OPER=null, SUBS=null, OMZET_KORT_S=null, _operLoaded=false, _operLoading=false, _txYears=null;
@@ -935,20 +936,26 @@ function renderAsset(){
   } else if(state.period==='halfjaar'){
     title.textContent=`Halfjaren — ${Y}`;sub.textContent='Klik op een halfjaar om de kwartalen te zien';
     const ds=[{type:'bar',label:primLabel(Y),data:half(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
+    if(bench)ds.push(benchDataset(bench,half(bench.monthly)));
     cfg=wrapCfg(['H1','H2'],ds,yScale,i=>{state.h=i;state.period='kwartaal';state.q=state.m=null;renderAsset();});
   } else if(state.period==='kwartaal'){
     title.textContent=`Kwartalen — ${Y}`;sub.textContent='Klik op een kwartaal om de maanden te zien';
     const ds=[{type:'bar',label:primLabel(Y),data:quart(prim),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
+    if(bench)ds.push(benchDataset(bench,quart(bench.monthly)));
     cfg=wrapCfg(['Q1','Q2','Q3','Q4'],ds,yScale,i=>{state.q=i;state.period='maand';state.m=null;renderAsset();});
   } else if(state.period==='maand'){
     const inQ=state.q!=null;const idx=inQ?[state.q*3,state.q*3+1,state.q*3+2]:MAAND.map((_,i)=>i);
     title.textContent=inQ?`Maanden Q${state.q+1} — ${Y}`:`Maanden — ${Y}`;sub.textContent='Klik op een maand om door te klikken naar dagniveau';
     const ds=[{type:'bar',label:primLabel(Y),data:idx.map(i=>prim[i]),backgroundColor:ORANGE+'cc',borderRadius:4,order:2}];
+    if(bench)ds.push(benchDataset(bench,idx.map(i=>bench.monthly[i])));
     cfg=wrapCfg(idx.map(i=>MAAND[i]),ds,yScale,k=>{state.m=idx[k];state.period='dag';renderAsset();});
   } else if(state.period==='dag'){
     const m=state.m!=null?state.m:lastFilled(Y);const days=dailyFor(Y,m);
     title.textContent=`Dagen — ${MAAND[m]} ${Y}`;sub.textContent='Laagste niveau · weekenden tonen hogere omzet';
-    cfg={type:'bar',data:{labels:days.map((_,i)=>i+1),datasets:[{label:'Omzet/dag',data:days,backgroundColor:ORANGE+'cc',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...noLegend,tooltip:{callbacks:{label:c=>fmtEUR(c.raw)}}},scales:yScale}};
+    const bDay=benchDaily(bench,m);
+    const dds=[{type:'bar',label:bDay?primLabel(Y):'Omzet/dag',data:days,backgroundColor:ORANGE+'cc',borderRadius:3,order:2}];
+    if(bDay)dds.push(benchDataset(bench,bDay.slice(0,days.length)));
+    cfg={type:'bar',data:{labels:days.map((_,i)=>i+1),datasets:dds},options:{responsive:true,maintainAspectRatio:false,plugins:{...(bDay?legendBottom:noLegend),tooltip:{callbacks:{label:c=>(bDay?c.dataset.label+': ':'')+fmtEUR(c.raw)}}},scales:yScale}};
   } else {
     title.textContent=`Cumulatieve omzet YTD — ${Y}${cmpTxt}`;sub.textContent='Lopend totaal vanaf 1 januari · actuals doorgetrokken met forecast (gestippeld)';
     const act=omzetFor(Y);let last=-1;for(let i=0;i<12;i++)if(act[i]!=null)last=i;
