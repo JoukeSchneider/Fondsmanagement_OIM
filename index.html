@@ -159,16 +159,27 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
   <div class="lock-logo">OIM</div>
   <div class="lock-title">Fondsmanager-dashboard</div>
   <div class="lock-sub">Orange IM · besloten toegang</div>
-  <input type="password" id="lockPw" class="lock-input" placeholder="Wachtwoord" autocomplete="current-password">
-  <button class="lock-btn" id="lockBtn">Toegang</button>
+  <div id="loginForm">
+   <input type="email" id="lockEmail" class="lock-input" placeholder="E-mailadres" autocomplete="username" style="margin-bottom:8px">
+   <input type="password" id="lockPw" class="lock-input" placeholder="Wachtwoord" autocomplete="current-password">
+   <button class="lock-btn" id="lockBtn">Inloggen</button>
+   <div style="margin-top:10px;font-size:12px"><a href="#" id="lockForgot" style="color:inherit;opacity:.7">Wachtwoord vergeten?</a></div>
+  </div>
+  <div id="setPwForm" style="display:none">
+   <div class="lock-sub" style="margin-bottom:10px">Kies een wachtwoord (minimaal 10 tekens)</div>
+   <input type="password" id="newPw1" class="lock-input" placeholder="Nieuw wachtwoord" autocomplete="new-password" style="margin-bottom:8px">
+   <input type="password" id="newPw2" class="lock-input" placeholder="Herhaal wachtwoord" autocomplete="new-password">
+   <button class="lock-btn" id="setPwBtn">Wachtwoord opslaan</button>
+  </div>
   <div class="lock-error" id="lockErr"></div>
-  <div class="lock-note">Besloten omgeving · alleen voor de fondsmanager</div>
+  <div class="lock-note">Besloten omgeving · alleen voor uitgenodigde gebruikers</div>
  </div>
 </div>
 <div class="shell" id="appShell" style="display:none">
 <header>
  <div class="logo"><div class="logo-mark">OIM</div><div><div class="logo-text">Fondsmanager-dashboard<span class="concept-pill">Concept</span></div><div class="logo-sub">Orange IM · multi-fonds · multi-asset-class</div></div></div>
  <div class="controls">
+  <div class="ctrl"><span class="ctrl-label" id="authUser">—</span><span id="logoutBtn" title="Uitloggen" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">Uitloggen</span></div>
   <div class="ctrl"><span class="ctrl-label">Actief fonds</span><div class="fund-active-label muted" id="fundActiveLabel">— geen fonds geselecteerd</div><span id="exitFund" title="Terug naar fondsenoverzicht" style="font-size:11px;color:var(--text3);cursor:pointer;text-align:right;align-self:stretch;text-decoration:underline">Exit</span></div>
  </div>
 </header>
@@ -596,10 +607,7 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
    <div id="preview-meta" class="note mb8"></div>
    <div id="preview-table"></div>
   </div>
-  <div id="imp-pass-row" style="display:none;margin-top:12px">
-   <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Import-wachtwoord</label>
-   <input type="password" id="imp-pass" class="ctrl-select" style="max-width:280px" placeholder="vereist om naar de database te schrijven" autocomplete="off">
-  </div>
+  <div id="imp-pass-row" style="display:none"></div>
   <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
    <button class="btn primary" id="btn-upload" onclick="startUpload()">↑ Uploaden naar database</button>
    <button class="btn" onclick="cancelPreview()">Annuleren</button>
@@ -635,47 +643,135 @@ select.ctrl-select{padding:7px 11px;border:1px solid var(--border2);border-radiu
 </div>
 
 <script>
-// ============ LOCKSCREEN (drempel) ============
-// SHA-256 hash van het wachtwoord. Het wachtwoord zelf staat nergens in de code.
-// LET OP: dit is een drempel, geen echte beveiliging. Wie de broncode of het
-// netwerkverkeer bekijkt kan de Supabase-data alsnog benaderen. Echte auth volgt later.
-const PW_HASH='567719eaa844bb9b88d004fbd8609cd5e5e6360b51a2fb27b3ea975f000819c0';
-
-// Veilige sessionStorage-wrapper: bij een opaque origin (lokaal file:// of sandbox)
-// gooit sessionStorage een SecurityError. Dan vallen we terug op een in-memory variabele.
+// ============ AUTHENTICATIE (Supabase Auth) ============
+// Inloggen met e-mail + wachtwoord. Toegang en rechten worden in de database afgedwongen
+// via Row Level Security: alleen gebruikers in app_users kunnen lezen, alleen 'importer' kan schrijven.
+// De anon-key hieronder (SB_KEY) is publiek en geeft zonder login geen toegang tot data.
 const safeStore=(function(){
   let mem={};
   try{
     const t='__t';window.sessionStorage.setItem(t,'1');window.sessionStorage.removeItem(t);
     return {get:k=>{try{return window.sessionStorage.getItem(k);}catch(e){return mem[k]||null;}},
-            set:(k,v)=>{try{window.sessionStorage.setItem(k,v);}catch(e){mem[k]=v;}}};
+            set:(k,v)=>{try{window.sessionStorage.setItem(k,v);}catch(e){mem[k]=v;}},
+            del:k=>{try{window.sessionStorage.removeItem(k);}catch(e){delete mem[k];}}};
   }catch(e){
-    return {get:k=>mem[k]||null, set:(k,v)=>{mem[k]=v;}};
+    return {get:k=>mem[k]||null, set:(k,v)=>{mem[k]=v;}, del:k=>{delete mem[k];}};
   }
 })();
-
-async function sha256(str){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+const AUTH={session:null,email:'',role:null,isImporter:false,_timer:null};
+function sbToken(){ return (AUTH.session&&AUTH.session.access_token)||SB_KEY; }
+function _saveSession(j){
+  AUTH.session={access_token:j.access_token,refresh_token:j.refresh_token,
+    expires_at:j.expires_at||Math.floor(Date.now()/1000)+(j.expires_in||3600)};
+  AUTH.email=(j.user&&j.user.email)||AUTH.email;
+  safeStore.set('oim_session',JSON.stringify({...AUTH.session,email:AUTH.email}));
+  clearTimeout(AUTH._timer);
+  const ms=Math.max(5000,(AUTH.session.expires_at*1000-Date.now())-60000);
+  AUTH._timer=setTimeout(refreshSession,ms);
+}
+async function _authCall(path,body,method='POST',token){
+  const res=await fetch(`${SB_URL}/auth/v1/${path}`,{method,
+    headers:{'apikey':SB_KEY,'content-type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},
+    body:body?JSON.stringify(body):undefined});
+  let j={}; try{ j=await res.json(); }catch(e){}
+  if(!res.ok) throw new Error(j.error_description||j.msg||j.message||('HTTP '+res.status));
+  return j;
+}
+async function refreshSession(){
+  try{
+    if(!AUTH.session||!AUTH.session.refresh_token) throw new Error('geen sessie');
+    _saveSession(await _authCall('token?grant_type=refresh_token',{refresh_token:AUTH.session.refresh_token}));
+    return true;
+  }catch(e){ console.warn('[auth] refresh mislukt',e); logout('Sessie verlopen, log opnieuw in.'); return false; }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&AUTH.session&&AUTH.session.expires_at*1000-Date.now()<120000) refreshSession();
+});
+async function loadRole(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/app_users?select=role`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
+    const j=r.ok?await r.json():[];
+    AUTH.role=(j[0]&&j[0].role)||null;
+  }catch(e){ AUTH.role=null; }
+  AUTH.isImporter=AUTH.role==='importer';
+  return AUTH.role;
+}
+function applyRoleUI(){
+  const imp=document.querySelector('.tab-btn[data-t="import"]');
+  if(imp&&!AUTH.isImporter){ imp.classList.add('locked'); imp.title='Alleen voor gebruikers met schrijfrechten'; }
+  const u=document.getElementById('authUser');
+  if(u) u.textContent=AUTH.email+(AUTH.role?(' · '+(AUTH.isImporter?'schrijven':'lezen')):'');
 }
 let _appInited=false;
-function unlockApp(){
+async function unlockApp(){
+  const role=await loadRole();
+  if(!role){ logout('Dit account heeft (nog) geen toegang tot het dashboard.'); return; }
   document.getElementById('lockscreen').style.display='none';
   document.getElementById('appShell').style.display='';
+  applyRoleUI();
   if(!_appInited && typeof initApp==='function'){ _appInited=true; initApp(); }
 }
+function logout(msg){
+  const tok=AUTH.session&&AUTH.session.access_token;
+  if(tok) _authCall('logout',null,'POST',tok).catch(()=>{});
+  clearTimeout(AUTH._timer); AUTH.session=null; AUTH.role=null; AUTH.isImporter=false;
+  safeStore.del('oim_session');
+  if(_appInited){ location.reload(); return; }
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('lockscreen').style.display='';
+  document.getElementById('lockErr').textContent=msg||'';
+}
 async function tryUnlock(){
+  const email=document.getElementById('lockEmail').value.trim().toLowerCase();
   const pw=document.getElementById('lockPw').value;
-  const err=document.getElementById('lockErr');
-  if(!pw){err.textContent='Voer een wachtwoord in.';return;}
-  const h=await sha256(pw);
-  if(h===PW_HASH){
-    safeStore.set('oim_unlocked','1');
-    unlockApp();
-  } else {
-    err.textContent='Onjuist wachtwoord.';
+  const err=document.getElementById('lockErr'); err.textContent='';
+  if(!email||!pw){err.textContent='Vul e-mailadres en wachtwoord in.';return;}
+  try{
+    _saveSession(await _authCall('token?grant_type=password',{email,password:pw}));
+    document.getElementById('lockPw').value='';
+    await unlockApp();
+  }catch(e){
+    err.textContent=/invalid/i.test(e.message)?'Onjuist e-mailadres of wachtwoord.':('Inloggen mislukt: '+e.message);
     document.getElementById('lockPw').value='';
   }
+}
+async function forgotPw(e){
+  e.preventDefault();
+  const email=document.getElementById('lockEmail').value.trim().toLowerCase();
+  const err=document.getElementById('lockErr');
+  if(!email){err.textContent='Vul eerst je e-mailadres in.';return;}
+  try{ await _authCall('recover',{email}); }catch(x){}
+  err.textContent='Als dit adres bekend is, is er een resetlink verstuurd.';
+}
+async function setNewPw(){
+  const p1=document.getElementById('newPw1').value, p2=document.getElementById('newPw2').value;
+  const err=document.getElementById('lockErr'); err.textContent='';
+  if(p1.length<10){err.textContent='Minimaal 10 tekens.';return;}
+  if(p1!==p2){err.textContent='Wachtwoorden komen niet overeen.';return;}
+  try{
+    await _authCall('user',{password:p1},'PUT',AUTH.session.access_token);
+    document.getElementById('setPwForm').style.display='none';
+    document.getElementById('loginForm').style.display='';
+    await unlockApp();
+  }catch(x){ err.textContent='Opslaan mislukt: '+x.message; }
+}
+// Uitnodigings- of resetlink: Supabase stuurt de gebruiker terug met #access_token=...&type=invite|recovery
+function handleAuthRedirect(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,''));
+  if(h.get('error_description')){ document.getElementById('lockErr').textContent=h.get('error_description'); history.replaceState(null,'',location.pathname+location.search); return false; }
+  if(!h.get('access_token')) return false;
+  _saveSession({access_token:h.get('access_token'),refresh_token:h.get('refresh_token'),
+    expires_in:+h.get('expires_in')||3600,expires_at:+h.get('expires_at')||undefined});
+  try{ AUTH.email=JSON.parse(atob(h.get('access_token').split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email||''; }catch(e){}
+  history.replaceState(null,'',location.pathname+location.search);
+  const t=h.get('type');
+  if(t==='invite'||t==='recovery'){
+    document.getElementById('loginForm').style.display='none';
+    document.getElementById('setPwForm').style.display='';
+    document.getElementById('newPw1').focus();
+    return true;
+  }
+  unlockApp(); return true;
 }
 // Init lockscreen-handlers draait aan het einde van het script (na alle definities).
 
@@ -1920,6 +2016,7 @@ async function selectFund(fid, fname){
   if(lbl){ lbl.textContent = fname; lbl.classList.remove('muted'); }
   // Ontgrendel alle detail-tabs
   document.querySelectorAll('.tab-btn.locked').forEach(b=>b.classList.remove('locked'));
+  if(typeof applyRoleUI==='function') applyRoleUI();
   _lastLoadStatus='laden gestart…';
   await loadMasterData();
   activateTab('fonds');
@@ -1947,14 +2044,14 @@ async function loadAssetStatic(){
   if(!state.fundId){ _lastLoadStatus='geen fonds'; return; }
   try{
     // 1. Portfolios van dit fonds
-    const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const pRes=await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
     if(!pRes.ok){ _lastLoadStatus='portfolio-fetch faalde: HTTP '+pRes.status; afterLoad(); return; }
     const ports=await pRes.json();
     if(!ports.length){ _lastLoadStatus='geen portfolios gevonden'; afterLoad(); return; }
     const pIds=ports.map(p=>p.id).join(',');
 
     // 2. Assets in die portfolios
-    const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name,asset_class,address,city,capacity,capacity_unit,construction_year,latest_fair_value,fair_value_date,attributes&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const aRes=await fetch(`${SB_URL}/rest/v1/assets?select=id,name,asset_class,address,city,capacity,capacity_unit,construction_year,latest_fair_value,fair_value_date,attributes&portfolio_id=in.(${pIds})`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
     if(!aRes.ok){ _lastLoadStatus='asset-fetch faalde: HTTP '+aRes.status; afterLoad(); return; }
     const assets=await aRes.json();
     if(!assets.length){ _lastLoadStatus='geen assets gevonden'; afterLoad(); return; }
@@ -1981,7 +2078,7 @@ async function loadAssetStatic(){
 
     // 3. Tarieven
     const sbIds=assets.map(a=>a.id).join(',');
-    const tRes=await fetch(`${SB_URL}/rest/v1/parking_tariffs?select=*&asset_id=in.(${sbIds})&order=category,valid_from`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const tRes=await fetch(`${SB_URL}/rest/v1/parking_tariffs?select=*&asset_id=in.(${sbIds})&order=category,valid_from`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
     if(!tRes.ok){ _lastLoadStatus='tarief-fetch faalde: HTTP '+tRes.status; afterLoad(); return; }
     const tariffs=await tRes.json();
 
@@ -2027,13 +2124,24 @@ document.getElementById('exitFund').addEventListener('click',()=>location.reload
 
 function initApp(){renderChips();updateCtx();renderReport('participant');fitScroll();loadFondsenOverview();}
 
-// ---- Lockscreen activeren (na alle definities) ----
-(function(){
-  if(safeStore.get('oim_unlocked')==='1'){ unlockApp(); }
+// ---- Login activeren (na alle definities, ook SB_URL/SB_KEY verderop) ----
+window.addEventListener('DOMContentLoaded',function(){
   document.getElementById('lockBtn').addEventListener('click',tryUnlock);
   document.getElementById('lockPw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
-  document.getElementById('lockPw').focus();
-})();
+  document.getElementById('lockForgot').addEventListener('click',forgotPw);
+  document.getElementById('setPwBtn').addEventListener('click',setNewPw);
+  document.getElementById('newPw2').addEventListener('keydown',e=>{if(e.key==='Enter')setNewPw();});
+  document.getElementById('logoutBtn').addEventListener('click',()=>logout());
+  if(handleAuthRedirect()) return;
+  let st=null; try{ st=JSON.parse(safeStore.get('oim_session')||'null'); }catch(e){}
+  if(st&&st.refresh_token){
+    AUTH.session=st; AUTH.email=st.email||'';
+    (st.expires_at*1000-Date.now()>60000 ? Promise.resolve(_saveSession({...st,user:{email:st.email}})) : refreshSession())
+      .then(ok=>{ if(ok!==false) unlockApp(); });
+    return;
+  }
+  document.getElementById('lockEmail').focus();
+});
 
 // ============ UPLOAD LOGICA ============
 // Laad fonds- en asset-opties bij openen import-tab
@@ -2049,14 +2157,14 @@ async function loadImportSelectors() {
   if (!state.fundId) return;
   try {
     const pRes = await fetch(`${SB_URL}/rest/v1/portfolios?select=id&fund_id=eq.${state.fundId}`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + sbToken() }
     });
     const portfolios = await pRes.json();
     if (!portfolios.length) return;
 
     const pIds = portfolios.map(p => p.id).join(',');
     const aRes = await fetch(`${SB_URL}/rest/v1/assets?select=id,name&portfolio_id=in.(${pIds})&order=name`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + sbToken() }
     });
     const assets = await aRes.json();
     assets.forEach(a => {
@@ -2234,16 +2342,15 @@ function showQparkPreview(q, filename){
 }
 
 async function uploadQpark(){
-  const pw=(document.getElementById('imp-pass')?.value||'').trim();
-  if(!pw) throw new Error('Vul het import-wachtwoord in.');
+  if(!AUTH.isImporter) throw new Error('Je account heeft geen schrijfrechten.');
   const q=imp.qpark; if(!q) throw new Error('Geen geldig Q-Park bestand geladen.');
   let type, payload;
   if(q.kind==='omzet'){ type='omzet'; payload={rows:q.rows, source:imp.file.name}; }
   else { type='operational'; payload={weekly:q.weekly, subs:q.subs, source:imp.file.name}; }
   const res=await fetch(`${SB_URL}/functions/v1/import-qpark`,{
     method:'POST',
-    headers:{'content-type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
-    body:JSON.stringify({token:pw, type, payload})
+    headers:{'content-type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+sbToken()},
+    body:JSON.stringify({type, payload})
   });
   let j={}; try{ j=await res.json(); }catch(e){}
   if(!res.ok || j.error) throw new Error(j.error || ('upload mislukt (HTTP '+res.status+')'));
@@ -2365,8 +2472,7 @@ function startUpload() {
     document.getElementById('confirm-msg').innerHTML =
       `Je staat op het punt het bestand <strong>${imp.file.name}</strong> in te lezen als scenario <strong>"${nm}"</strong>.<br><br>De volledige cashflow (alle line items × alle perioden) wordt opgeslagen en komt beschikbaar in de vergelijk-dropdown.`;
   } else if(imp.type==='qpark' && imp.qpark){
-    const pw=(document.getElementById('imp-pass')?.value||'').trim();
-    if(!pw){ alert('Vul eerst het import-wachtwoord in.'); return; }
+    if(!AUTH.isImporter){ alert('Je account heeft geen schrijfrechten.'); return; }
     const q=imp.qpark;
     const what = q.kind==='omzet' ? `${q.rows.length} maanden parkeeromzet` : `${q.weekly.length} weekwaarden + ${q.subs.length} abonnementen`;
     document.getElementById('confirm-msg').innerHTML =
@@ -2548,7 +2654,7 @@ async function uploadArgusScenario(fundId, file){
   if(!records.length) throw new Error('Geen cashflow-regels herkend in het bestand.');
 
   // Check op bestaande scenario met zelfde naam
-  const existRes=await fetch(`${SB_URL}/rest/v1/scenarios?select=id,name&fund_id=eq.${fundId}&name=eq.${encodeURIComponent(name)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  const existRes=await fetch(`${SB_URL}/rest/v1/scenarios?select=id,name&fund_id=eq.${fundId}&name=eq.${encodeURIComponent(name)}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
   const exist=await existRes.json();
   let scenarioId;
   if(exist.length){
@@ -2557,10 +2663,10 @@ async function uploadArgusScenario(fundId, file){
     }
     scenarioId=exist[0].id;
     // Verwijder oude cashflow-regels
-    await fetch(`${SB_URL}/rest/v1/scenario_cashflows?scenario_id=eq.${scenarioId}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    await fetch(`${SB_URL}/rest/v1/scenarios?id=eq.${scenarioId}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({file_name:file.name,created_at:new Date().toISOString()})});
+    await fetch(`${SB_URL}/rest/v1/scenario_cashflows?scenario_id=eq.${scenarioId}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
+    await fetch(`${SB_URL}/rest/v1/scenarios?id=eq.${scenarioId}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({file_name:file.name,created_at:new Date().toISOString()})});
   } else {
-    const ins=await fetch(`${SB_URL}/rest/v1/scenarios`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify([{fund_id:fundId,name,source:'argus',file_name:file.name}])});
+    const ins=await fetch(`${SB_URL}/rest/v1/scenarios`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken(),'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify([{fund_id:fundId,name,source:'argus',file_name:file.name}])});
     if(!ins.ok){const e=await ins.json().catch(()=>({}));throw new Error(e.message||'Scenario aanmaken mislukt');}
     scenarioId=(await ins.json())[0].id;
   }
@@ -2580,7 +2686,7 @@ async function uploadArgusScenario(fundId, file){
 
 async function sbGet(path){
   try{
-    const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken()}});
     if(!res.ok)return null;
     return await res.json();
   }catch(e){console.warn('sbGet',path,e);return null;}
@@ -2606,7 +2712,7 @@ function nlMonthLabel(ds){if(!ds)return '';const p=ds.split('-');return (MAAND[+
 async function sbPost(table, payload) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+sbToken(), 'Content-Type':'application/json', 'Prefer':'return=minimal' },
     body: JSON.stringify(payload)
   });
   if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
@@ -2615,7 +2721,7 @@ async function sbPost(table, payload) {
 async function sbUpsert(table, payload, onConflict) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
     method: 'POST',
-    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
+    headers: { 'apikey':SB_KEY, 'Authorization':'Bearer '+sbToken(), 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(payload)
   });
   if(!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||e.hint||`HTTP ${res.status}`); }
@@ -2631,7 +2737,7 @@ async function archiveRaw(file, sourceType){
     const path=`${sourceType||'other'}/${ts}_${safe}`;
     const res=await fetch(`${SB_URL}/storage/v1/object/imports-raw/${encodeURI(path)}`,{
       method:'POST',
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'x-upsert':'true','content-type':file.type||'application/octet-stream'},
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken(),'x-upsert':'true','content-type':file.type||'application/octet-stream'},
       body:file
     });
     if(!res.ok){ console.warn('archiveRaw mislukt:', await res.text().catch(()=>res.status)); return null; }
@@ -2643,7 +2749,7 @@ async function dlImport(path){
   try{
     const res=await fetch(`${SB_URL}/storage/v1/object/sign/imports-raw/${encodeURI(path)}`,{
       method:'POST',
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'content-type':'application/json'},
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+sbToken(),'content-type':'application/json'},
       body:JSON.stringify({expiresIn:3600})
     });
     const j=await res.json().catch(()=>null);
